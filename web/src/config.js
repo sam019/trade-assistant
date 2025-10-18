@@ -1,0 +1,1 @@
+export const apiURL = location.protocol + '//' + location.hostname + ':' + import.meta.env.VITE_API_DEV_PORT;
