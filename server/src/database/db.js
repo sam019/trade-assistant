@@ -10,7 +10,7 @@ const orderSchema = new mongoose.Schema({
     amount: Number,
     unit: String,
     state: String,
-});
+}, { timestamps: true });
 const orderModel = mongoose.model('order', orderSchema);
 
 const favoriteMarkets = new mongoose.Schema({

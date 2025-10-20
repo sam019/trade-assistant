@@ -10,7 +10,7 @@ import { orderModel } from "../database/db";
 
 // console.log(Object.keys(Const));
 
-const { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES, ORDER_STATES } = Const;
+const { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } = Const;
 
 const app = new Hono();
 
@@ -46,7 +46,6 @@ export async function createSpotMarketOrder(data) {
     const sltpParams = {
         exchange,
         symbol,
-        state: ORDER_STATES.OPENING,
     };
     if (withSLTP) {
         if (!slPrice && !tpPrice) {
@@ -95,7 +94,6 @@ export async function createSpotMarketSLTPOrder(data) {
         symbol,
         amount,
         unit,
-        state: ORDER_STATES.OPENING,
     };
     // usePct为true时，换算为绝对值
     if (usePct) {
@@ -160,7 +158,6 @@ export async function createLinearPerpMarketOrder(data) {
         symbol,
         slPrice,
         tpPrice,
-        state: ORDER_STATES.OPENING,
     };
     if (withSLTP) {
         if (!slPrice && !tpPrice) {
@@ -268,7 +265,7 @@ export async function createLinearPerpMarketOrder(data) {
 
 // 创建合约止盈止损委托
 export async function createPerpMarketSLTPOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, __force } = data;
+    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id, __force } = data;
     const { linear, inverse } = getExchangeMonitor(exchange).markets;
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol);
     const position = getExchangeMonitor(exchange).positions?.find(pos => pos.symbol === symbol);
@@ -306,14 +303,17 @@ export async function createPerpMarketSLTPOrder(data) {
         unit,
         slPrice,
         tpPrice,
-        state: ORDER_STATES.OPENING,
     };
     if (usePct) {
         params.amount = new Decimal(amountPct).div(100).mul(position.contracts).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber();
         params.unit = ORDER_AMOUNT_TYPES.CONTRACT;
     }
-    
-    const order = await orderWatcher.creatOrder(params);
+    let order;
+    if (id) {
+        order = await orderModel.findByIdAndUpdate(id, params);
+    } else {
+        order = await orderWatcher.creatOrder(params);
+    }
     return order;
 }
 
@@ -347,7 +347,6 @@ export async function createInversePerpMarketOrder(data) {
         symbol,
         slPrice,
         tpPrice,
-        state: ORDER_STATES.OPENING,
     };
     if (withSLTP) {
         if (!slPrice && !tpPrice) {

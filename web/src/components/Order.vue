@@ -63,6 +63,15 @@ export default {
             }
             const amountValue = new Decimal(this.order.amount).div(this.position?.contracts || 0).mul(this.position?.notional || 0).toNumber();
             return this.order.amount + `/${amountValue}`;
+        },
+        quoteCurrency() {
+            if (this.isSpot) {
+                return this.baseQuote[this.order.unit === ORDER_AMOUNT_TYPES.BASE ? 0 : 1];
+            }
+            return this.isLinearPerp ? this.baseQuote[1] : this.baseQuote[0];
+        },
+        contractCurrency() {
+            return this.isLinearPerp ? this.baseQuote[0] : this.baseQuote[1];
         }
     }
 }
@@ -71,9 +80,15 @@ export default {
     <div class="order">
         <div class="row1">
             <div style="display: flex; gap: 5px; align-items: center;">
-                <div v-if="isSpot">{{ order.symbol }}</div>
+                <template v-if="isSpot">
+                    <el-tag type="info" style="color: white" effect="plain" size="small" @click="$emit('jumpMarket', order.symbol)">{{
+                        order.symbol
+                        }}</el-tag>
+                    <el-tag type="danger" size="small">{{ orderSideLabel }}</el-tag>
+                </template>
                 <template v-else-if="position">
-                    <el-tag :type="isLinearPerp ? 'primary' : 'warning'">{{ order.symbol }}</el-tag>
+                    <el-tag :type="isLinearPerp ? 'primary' : 'warning'" @click="$emit('jumpMarket', order.symbol)">{{
+                        order.symbol }}</el-tag>
                     <div class="tags">
                         <el-tag :type="isSellShort ? 'success' : 'danger'" size="small">止盈止损</el-tag>
                         <el-tag :type="isSellShort ? 'success' : 'danger'" size="small">{{ orderSideLabel }}</el-tag>
@@ -85,6 +100,7 @@ export default {
                 </div>
             </div>
             <div>
+                <el-button plain type="" size="small" style="width: 60px;" @click="$emit('edit', order)">编辑</el-button>
                 <el-button plain type="primary" size="small" style="width: 60px;"
                     @click="$emit('cancel', order)">撤单</el-button>
             </div>
@@ -99,8 +115,8 @@ export default {
                 <div class="value">{{ order.slPrice || '-' }}</div>
             </div>
             <div>
-                <div class="label">委托数量(<template v-if="!isSpot">张/</template>{{ isSpot ? baseQuote[order.unit
-                    === ORDER_AMOUNT_TYPES.BASE ? 0 : 1] : isLinearPerp ? baseQuote[1] : baseQuote[0] }})</div>
+                <div class="label">委托数量(<template v-if="!isSpot">{{ contractCurrency }}/</template>{{ quoteCurrency }})
+                </div>
                 <div class="value">{{ orderAmountAsQuote }}</div>
             </div>
         </div>

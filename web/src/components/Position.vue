@@ -36,7 +36,10 @@ export default {
             return this.baseQuoteType[2] === this.baseQuoteType[1];
         },
         quoteCurrency() {
-            return this.isLinear ? this.baseQuoteType[1] : this.baseQuoteType[0];
+            return this.baseQuoteType[2];
+        },
+        contractCurrency() {
+            return this.isLinear ? this.baseQuoteType[0] : this.baseQuoteType[1];
         }
     }
 }
@@ -48,7 +51,8 @@ export default {
                 style="margin-right: 5px;">
                 {{ sideLabel }}
             </el-tag>
-            <el-tag size="" style="font-size: 14px;" :type="isLinear ? 'primary' : 'warning'">{{ position.symbol }}</el-tag>
+            <el-tag size="" style="font-size: 14px;" :type="isLinear ? 'primary' : 'warning'"
+                @click="$emit('jumpMarket', position.symbol)">{{ position.symbol }}</el-tag>
             <!-- <el-tag size="small" :style="{ color: isLinear ? '' : 'warning' }">{{ typeLabel }}</el-tag> -->
             <span style="color: gray;">{{ marginModeLabel }}</span>
             <span style="">{{ position.leverage.longLeverage }}x</span>
@@ -66,8 +70,8 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">持仓数量 (张/{{ quoteCurrency }})</div>
-                <div class="value">{{ position.contracts }}/{{ position.notional }}</div>
+                <div class="label">持仓数量 ({{ contractCurrency }}/{{ quoteCurrency }})</div>
+                <div class="value">{{ position.contracts * position.contractSize }}/{{ position.notional }}</div>
             </div>
             <div>
                 <div class="label">保证金 ({{ quoteCurrency }})</div>

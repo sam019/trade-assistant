@@ -13,11 +13,15 @@ export default {
         isCurQuote: {
             type: Boolean,
             default: false
+        },
+    },
+    data() {
+        return {
+            STABLE_COINS
         }
     },
     methods: {
-        getEvaluateValue(amount) {
-            const value = new Decimal(amount || 0).mul(this.ticker?.last || 0).toDecimalPlaces(2).toNumber();
+        formatValue(value) {
             return value ? `\$${value}` : '';
         }
     },
@@ -25,13 +29,8 @@ export default {
         isStableCoin() {
             return Object.values(STABLE_COINS).includes(this.balance.currency);
         },
-        ticker() {
-            const symbol = `${this.balance.currency}/${STABLE_COINS.USDT}`;
-            return this.tickers[symbol];
-        },
-        lastPrice() {
-            if (!this.ticker?.last) return '-';
-            return `${Math.round(this.ticker.last * 100) / 100}(${this.ticker.percentage < 0 ? '' : '+'}${this.ticker.percentage.toFixed(2)}%)`;
+        evaluateValue() {
+            return this.balance.evaluateValue;
         }
     }
 }
@@ -39,27 +38,27 @@ export default {
 <template>
     <div class="balance" :style="{ border: isStableCoin && isCurQuote ? '' : '' }">
         <div class="row1">
-            <div @click="$emit('jumpMarket', balance.currency)">{{ balance.currency }}</div>
+            <el-tag type="info" style="color: white;" @click="!isStableCoin && $emit('jumpMarket', `${balance.currency}/${STABLE_COINS.USDT}`)">
+                {{ balance.currency }}</el-tag>
             <div v-if="!isStableCoin">
-                <!-- <div>最新价格</div> -->
-                <div>{{ lastPrice }}</div>
+                <div>{{ evaluateValue.lastPrice }}</div>
             </div>
         </div>
         <div class="row2">
             <div>
                 <div class="label">资产余额(现货)</div>
                 <div class="amount">{{ balance.spot || '-' }}</div>
-                <div class="value" v-if="!isStableCoin">{{ getEvaluateValue(balance.spot) }}</div>
+                <div class="value" v-if="!isStableCoin">{{ formatValue(evaluateValue.spot) }}</div>
             </div>
             <div>
                 <div class="label">资产余额(U永续)</div>
                 <div class="amount">{{ balance.linear || '-' }}</div>
-                <div class="value" v-if="!isStableCoin">{{ getEvaluateValue(balance.linear) }}</div>
+                <div class="value" v-if="!isStableCoin">{{ formatValue(evaluateValue.linear) }}</div>
             </div>
             <div>
                 <div class="label">资产余额(币永续)</div>
                 <div class="amount">{{ balance.inverse || '-' }}</div>
-                <div class="value" v-if="!isStableCoin">{{ getEvaluateValue(balance.inverse) }}</div>
+                <div class="value" v-if="!isStableCoin">{{ formatValue(evaluateValue.inverse) }}</div>
             </div>
         </div>
     </div>

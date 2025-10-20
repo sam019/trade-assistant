@@ -48,6 +48,7 @@ export default {
             orderAmountUnit: ORDER_AMOUNT_TYPES.QUOTE, // 订单数量计价币种
             orderAmountPct: 0, // 订单数量占可用数量的百分比
             orderUsePct: false, // 使用百分比数量代替绝对数量，适用于数量单位总价值为估算的场景，且拖动slide设定数量时
+            orderId: null, // 委托单的id，仅修改委托单时有用
             marginMode: null, // 仓位模式（全仓，逐仓）
             leverage: null, // 杠杆大小
             orderWithSLTP: false, // 市价单是否带止盈止损
@@ -110,18 +111,43 @@ export default {
             if (market) {
                 this.market = market;
             }
+            this.orderType = ORDER_TYPES.MARKET;
+            this.marginMode = null;
+            this.leverage = null;
+            this.resetForm();
+            if (!this.isSpotMarket) {
+                if (this.curPosition) {
+                    this.marginMode = this.curPosition.marginMode;
+                    this.leverage = this.curPosition.leverage.longLeverage;
+                } else {
+                    // 调整仓位模式（全仓，逐仓)
+                    service.getMarginMode(this.exchange, market.symbol).then(r => {
+                        // console.log('getMarginMode', r)
+                        this.marginMode = r.marginMode;
+                    });
+                    // 获取杠杆
+                    service.getLeverage(this.exchange, market.symbol).then(r => {
+                        // console.log('getLeverage', r)
+                        this.leverage = r.longLeverage;
+                    });
+                }
+            }
+            const url = new URL(window.location)
+            url.searchParams.set('market', this.market.symbol)
+            history.pushState(null, '', url);
+            // console.log('market', window.location.search)
         },
-        handleDialogClose() {
+        closeDialog() {
             this.dialogVisible = false;
             this.markets = null;
         },
-        async handleMarketsSearch(keywords) {
-            // console.log('handleMarketsSearch', keywords)
+        async searchMarkets(keywords) {
+            // console.log('searchMarkets', keywords)
             const res = await service.searchMarkets(this.exchange, keywords);
-            // console.log('handleMarketsSearch', res)
+            // console.log('searchMarkets', res)
             this.markets = res;
         },
-        async handleMarketFavorite(market) {
+        async changeMarketFavorite(market) {
             try {
                 if (!market.isFavorite) {
                     await service.addFavouriteMarket(this.exchange, market.symbol)
@@ -172,12 +198,9 @@ export default {
                 })
             }
         },
-        handleSideChange(side) {
-            this.orderSide = side;
-        },
         // 前端不需要做精确校验
         handleAmountChange(amount) {
-            console.log('handleAmountChange', amount);
+            // console.log('handleAmountChange', amount);
             if (!amount || amount <= 0) {
                 this.orderAmount = null;
                 this.orderAmountPct = 0;
@@ -186,34 +209,17 @@ export default {
             if (amount > this.avaiableOrderAmount) {
                 amount = this.avaiableOrderAmount;
             }
-            if (this.isSpotMarket) {
-                this.orderAmount = new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber();
-                this.orderAmountPct = new Decimal(this.orderAmount || 0).div(this.avaiableOrderAmount).mul(100).floor().toNumber();
-            } else if (this.isLinearPerpMarket) {
-                this.orderAmount = new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber();
-                // this.orderAmountPct = (this.orderAmount / this.avaiableOrderAmount * 100) || 0;
-                this.orderAmountPct = new Decimal(this.orderAmount || 0).div(this.avaiableOrderAmount).mul(100).floor().toNumber();;
-            }
-            console.log('orderAmount', new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber())
+            this.orderAmount = new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber();
+            this.orderAmountPct = new Decimal(this.orderAmount || 0).div(this.avaiableOrderAmount).mul(100).floor().toNumber();
+            // console.log('orderAmount', this.orderAmount, new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber())
         },
         handleAmountPctChange(amountPercent) {
-            console.log('avaiableOrderAmount', this.avaiableOrderAmount)
+            // console.log('avaiableOrderAmount', this.avaiableOrderAmount)
             if (this.isAvaiableOrderAmountEstimated) {
                 this.orderUsePct = true;
             }
             this.orderAmountPct = amountPercent;
             this.orderAmount = new Decimal(amountPercent).div(100).mul(this.avaiableOrderAmount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber();
-            // if (this.isSpotMarket) {
-            //     // this.orderAmount = Math.floor((this.avaiableOrderAmount * amountPercent / 100 / this.amountStep)) * this.amountStep;
-            //     this.orderAmount = new Decimal(amountPercent).div(100).mul(this.avaiableOrderAmount).toNumber();
-            // } else if (this.isLinearPerpMarket) {
-            //     // if (this.reduceOnly) {
-            //     //     this.orderAmount = new Decimal(amountPercent).mul(this.curPosition.contracts).div(this.curPosition.contractSize);
-            //     // }
-            //     this.orderAmount = new Decimal(amountPercent).div(100).mul(this.avaiableOrderAmount).toNumber();
-            // } else {
-            //     this.orderAmount = new Decimal(amountPercent).div(100).mul(this.avaiableOrderAmount).toNumber();
-            // }
         },
         async handleCreateOrder() {
             const isFormValid = this.validateForm();
@@ -243,7 +249,8 @@ export default {
                     reduceOnly: this.reduceOnly,
                     tpPrice: this.tpPrice,
                     slPrice: this.slPrice,
-                    __force: true,
+                    id: this.orderId,
+                    // __force: true,
                 });
                 this.resetForm(true);
                 this.$message({
@@ -272,7 +279,7 @@ export default {
                 return true;
             }
         },
-        resetForm: _.debounce(function (onlyResetValue = false) {
+        resetForm(onlyResetValue = false) {
             this.orderAmount = null;
             this.orderAmountPct = 0;
             this.orderUsePct = false;
@@ -282,7 +289,8 @@ export default {
             if (!onlyResetValue) {
                 this.orderAmountUnit = ORDER_AMOUNT_TYPES.QUOTE;
             }
-        }),
+            this.orderId = null;
+        },
         async handleCancelOrder(order) {
             try {
                 await service.deleteOrder(order._id);
@@ -298,13 +306,6 @@ export default {
                 })
             }
         },
-        async handleJumpMarket(currency) {
-            const symbol = currency + '/USDT';
-            const market = await service.getMarket(this.exchange, symbol);
-            if (market) {
-                this.changeMarket(market);
-            }
-        },
         isSideDisabled(side) {
             if (this.orderType !== ORDER_TYPES.SLTP) return false
             if (this.isSpotMarket) {
@@ -313,7 +314,9 @@ export default {
             return this.curPosition && ((this.reduceOnly && side !== this.orderSide) || (!this.reduceOnly && side === this.orderSide));
         },
         getPrecisionByUnit(unit) {
-            return parseInt(/\d+e-(\d)/.exec(this.market?.precision ? this.market.precision[unit] : '1e-8')[1]);
+            // console.log(this.market?.precision, this.market.precision, unit)
+            // console.log(/\d+e-(\d)/.exec('1e-8'))
+            return parseInt(/\d+e-(\d)/.exec(this.market?.precision && this.market.precision[unit] || '1e-8')[1]);
         },
         async handleClosePosition(position) {
             const loading = ElLoading.service();
@@ -326,13 +329,43 @@ export default {
         },
         backTop() {
             window.scrollTo(0, 0);
-        }
-    },
-    watch: {
-        orderSide() {
-            this.resetForm();
         },
-        orderType() {
+        async handleSLTPPosition(position) {
+            if (this.market.symbol !== position.symbol) {
+                const market = await service.getMarket(this.exchange, position.symbol);
+                this.changeMarket(market);
+            }
+            this.orderType = ORDER_TYPES.SLTP;
+            this.resetForm();
+            this.backTop();
+        },
+        async handleEditOrder(order) {
+            // console.log('handleEditOrder', order)
+            if (this.orderId === order.id) return;
+            if (this.market.symbol !== order.symbol) {
+                const market = await service.getMarket(this.exchange, order.symbol);
+                this.changeMarket(market);
+            }
+            this.orderId = order._id;
+            this.orderType = ORDER_TYPES.SLTP;
+            this.slPrice = order.slPrice;
+            this.tpPrice = order.tpPrice;
+            
+            if (this.isSpotMarket) {
+                this.orderAmountUnit = order.unit;
+                this.handleAmountChange(order.amount);
+            } else {
+                if (order.unit === ORDER_AMOUNT_TYPES.CONTRACT) {
+                    this.orderAmountUnit = this.isLinearPerpMarket ? this.market.base : this.market.quote;
+                    this.handleAmountChange(order.amount * this.market.contractSize);
+                } else {
+                    this.orderAmountUnit = order.unit;
+                    this.handleAmountChange(order.amount);
+                }
+            }
+        },
+        handleOrderTypeChange(value) {
+            this.orderType = value;
             if (this.isSpotMarket) {
                 if (this.orderType === ORDER_TYPES.SLTP) {
                     this.handleSideChange(ORDER_SIDES.SELL);
@@ -343,49 +376,35 @@ export default {
                 // this.handleSideChange(this.reduceOnly ? );
                 this.curPosition && !this.reduceOnly && this.handleSideChange(Object.values(ORDER_SIDES).find(s => s !== this.orderSide));
             }
-
             this.resetForm();
         },
-        market(market) {
-            this.orderType = ORDER_TYPES.MARKET;
-            this.marginMode = null;
-            this.leverage = null;
-            this.resetForm();
-            if (!this.isSpotMarket) {
-                if (this.curPosition) {
-                    this.marginMode = this.curPosition.marginMode;
-                    this.leverage = this.curPosition.leverage.longLeverage;
-                } else {
-                    // 调整仓位模式（全仓，逐仓)
-                    service.getMarginMode(this.exchange, market.symbol).then(r => {
-                        // console.log('getMarginMode', r)
-                        this.marginMode = r.marginMode;
-                    });
-                    // 获取杠杆
-                    service.getLeverage(this.exchange, market.symbol).then(r => {
-                        // console.log('getLeverage', r)
-                        this.leverage = r.longLeverage;
-                    });
-                }
-            }
-            const url = new URL(window.location)
-            url.searchParams.set('market', this.market.symbol)
-            history.pushState(null, '', url);
-            // console.log('market', window.location.search)
-        },
-        symbolsNeedTicker(newVal, oldVal) {
-            // console.log('symbolsNeedTicker', newVal, oldVal)
-            if (_.isEqual(newVal, oldVal)) return;
-            socket.subscribeTickers(this.exchange, this.symbolsNeedTicker, (tickers) => {
-                // console.log('tickersUpdate', this.symbolsNeedTicker, this.market.symbol, tickers);
-                this.tickers = tickers;
-            });
-        },
-        orderAmountUnit() {
+        handleAmountUnitChange(value) {
+            this.orderAmountUnit = value;
             this.orderAmount = null;
             this.orderAmountPct = 0;
             this.orderUsePct = false;
         },
+        handleSideChange(value) {
+            this.orderSide = value;
+            this.resetForm();
+        },
+        getEvaluateValue(balance) {
+            const symbol = `${balance.currency}/${STABLE_COINS.USDT}`;
+            const ticker = this.tickers[symbol];
+            const value = {
+                spot: new Decimal(balance.spot || 0).mul(ticker?.last || 0).toDecimalPlaces(2).toNumber(),
+                linear: new Decimal(balance.linear || 0).mul(ticker?.last || 0).toDecimalPlaces(2).toNumber(),
+                inverse: new Decimal(balance.inverse || 0).mul(ticker?.last || 0).toDecimalPlaces(2).toNumber(),
+                lastPrice: ticker?.last || 0,
+            };
+            return value
+        },
+        async handleJumpMarket(symbol) {
+            if (this.market.symbol === symbol) return;
+            const market = await service.getMarket(this.exchange, symbol);
+            this.changeMarket(market);
+            this.backTop();
+        }
     },
     computed: {
         orderTypesLabel() {
@@ -472,6 +491,9 @@ export default {
                     balances.push(balance);
                 }
             });
+            balances.forEach(balance => {
+                balance.evaluateValue = this.getEvaluateValue(balance);
+            });
             balances.sort((a, b) => {
                 if (this.isSpotMarket || this.isInversePerpMarket) {
                     if (a.currency === this.market.base) {
@@ -495,7 +517,7 @@ export default {
                 if (stableCoins.includes(b.currency)) {
                     return 1;
                 }
-                return a.currency.localeCompare(b.currency);
+                return b.evaluateValue[this.marketType] - a.evaluateValue[this.marketType];
             })
             return balances;
         },
@@ -653,19 +675,24 @@ export default {
         },
         orders() {
             const displayOrders = [];
-            let curMarketOrder;
             Object.values(this.exchangeAccount?.orders || {}).forEach(({ orders }) => {
                 orders.forEach(order => {
                     // console.log(order.symbol, this.market.symbol, order.symbol === this.market.symbol)
-                    if (order.symbol === this.market.symbol) {
-                        curMarketOrder = order;
-                    } else {
-                        displayOrders.push(order);
-                    }
+                    displayOrders.push(order);
                 })
             });
+            displayOrders.sort((a, b) => b.updatedAt - a.updatedAt);
             // console.log(...displayOrders, 'aa',curMarketOrder)
-            return curMarketOrder ? [curMarketOrder, ...displayOrders] : displayOrders;
+            return displayOrders;
+        },
+        curOrders() {
+            const curOrders = [];
+            this.orders.forEach(order => {
+                if (order.symbol === this.market.symbol) {
+                    curOrders.push(order);
+                }
+            });
+            return curOrders;
         },
         reduceOnly() {
             if (this.isSpotMarket) return false;
@@ -684,7 +711,15 @@ export default {
             return this.exchangeAccount?.positions?.find(pos => pos.symbol === this.market.symbol);
         },
         positions() {
-            return this.exchangeAccount?.positions?.sort((a, b) => b.timestamp - a.timestamp) || [];
+            return this.exchangeAccount?.positions?.sort((a, b) => {
+                const matchReg = /(\w+)\/(\w+):?(\w+)?/;
+                const aMatch = matchReg.exec(a.symbol);
+                const aValue = aMatch[3] === aMatch[2] ? a.notional : a.contracts * a.contractSize;
+
+                const bMatch = matchReg.exec(b.symbol);
+                const bValue = bMatch[3] === bMatch[2] ? b.notional : b.contracts * b.contractSize;
+                return bValue - aValue;
+            }) || [];
         },
         canChangeLeverage() {
             return !!this.curPosition
@@ -701,6 +736,16 @@ export default {
             }
         }
     },
+    watch: {
+        symbolsNeedTicker(newVal, oldVal) {
+            // console.log('symbolsNeedTicker', newVal, oldVal)
+            if (_.isEqual(newVal, oldVal)) return;
+            socket.subscribeTickers(this.exchange, this.symbolsNeedTicker, (tickers) => {
+                // console.log('tickersUpdate', this.symbolsNeedTicker, this.market.symbol, tickers);
+                this.tickers = tickers;
+            });
+        },
+    },
     mounted() {
         this.initExchanges();
     }
@@ -708,8 +753,8 @@ export default {
 </script>
 
 <template>
-    <MarketSelectPanel :visible="dialogVisible" :handleClose="handleDialogClose" :handleSearch="handleMarketsSearch"
-        :handleFavorite="handleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
+    <MarketSelectPanel :visible="dialogVisible" @close="closeDialog" @search="searchMarkets"
+        @favorite="changeMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
     <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px;">
         <!-- 选择交易所 -->
         <el-col style="flex-basis: 200px">
@@ -735,7 +780,8 @@ export default {
     <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
         <!-- 选择订单类型，市价/止盈止损等 -->
         <el-col style="flex-basis: 100px;">
-            <el-select v-model="orderType" placeholder="Select" style="width: 100px;">
+            <el-select :model-value="orderType" placeholder="Select" style="width: 100px;"
+                @change="handleOrderTypeChange">
                 <el-option v-for="item in ORDER_TYPES" :key="item" :label="orderTypesLabel[item]"
                     :value="item"></el-option>
             </el-select>
@@ -795,7 +841,8 @@ export default {
                 <span v-show="orderUsePct">预估</span>
             </template>
             <template #append>
-                <el-select style="width: 100px;" v-model="orderAmountUnit" :disabled="false">
+                <el-select style="width: 100px;" :model-value="orderAmountUnit" :disabled="false"
+                    @change="handleAmountUnitChange">
                     <el-option :label="market[ORDER_AMOUNT_TYPES.BASE]" :value="ORDER_AMOUNT_TYPES.BASE"></el-option>
                     <el-option :label="market[ORDER_AMOUNT_TYPES.QUOTE]" :value="ORDER_AMOUNT_TYPES.QUOTE"></el-option>
                 </el-select>
@@ -834,24 +881,29 @@ export default {
     <!-- 下单 -->
     <div style="display: flex; padding: 20px 10px;">
         <el-button :type="isFormValid ? 'primary' : 'info'" size="large" style="flex-grow: 1;" :disabled="!isFormValid"
-            @click="handleCreateOrder">下单</el-button>
+            @click="handleCreateOrder">{{ this.orderId ? `改单(${this.orderId})` : '下单' }}</el-button>
     </div>
     <!-- 余额/仓位/委托... -->
     <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
-        <el-tab-pane label="余额和仓位">
-            <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition">
+        <el-tab-pane label="总览">
+            <Order v-if="curOrders.length" v-for="item in curOrders" :key="item._id" :order="item"
+                @cancel="handleCancelOrder" @edit="handleEditOrder" @jump-market="handleJumpMarket">
+            </Order>
+            <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition"
+                @sltp="handleSLTPPosition" @jump-market="handleJumpMarket">
             </Position>
             <Balance v-for="item in balances" :key="item.currency" :balance="item"
-                :isCurQuote="item.currency === market.quote">
+                :isCurQuote="item.currency === market.quote" @jump-market="handleJumpMarket">
             </Balance>
         </el-tab-pane>
         <el-tab-pane :label="`仓位(${positions?.length})`">
             <Position v-for="item in positions" :key="item.symbol" :position="item"
-                @close-position="handleClosePosition">
+                @close-position="handleClosePosition" @sltp="handleSLTPPosition" @jump-market="handleJumpMarket">
             </Position>
         </el-tab-pane>
         <el-tab-pane :label="`委托(${orders.length})`">
-            <Order v-for="item in orders" :key="item._id" :order="item" @cancel="handleCancelOrder">
+            <Order v-for="item in orders" :key="item._id" :order="item" @cancel="handleCancelOrder"
+                @edit="handleEditOrder" @jump-market="handleJumpMarket">
             </Order>
         </el-tab-pane>
     </el-tabs>
