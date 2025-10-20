@@ -1,11 +1,11 @@
 <script>
-import { POSITION_SIDES, MARGIN_MODES } from '../../../const/const'
+import { POSITION_SIDES, MARGIN_MODES } from '../../../share/const'
 
 export default {
     props: {
         position: {
             type: Object,
-            required: true
+            required: true,
         },
         // market: {
         //     type: Object,
@@ -14,34 +14,34 @@ export default {
     },
     data() {
         return {
-            POSITION_SIDES
+            POSITION_SIDES,
         }
     },
     computed: {
         sideLabel() {
-            return this.position.side === POSITION_SIDES.LONG ? '多' : '空';
+            return this.position.side === POSITION_SIDES.LONG ? '多' : '空'
         },
         marginModeLabel() {
-            return this.position.marginType === MARGIN_MODES.CROSS ? '全仓' : '逐仓';
+            return this.position.marginType === MARGIN_MODES.CROSS ? '全仓' : '逐仓'
         },
         typeLabel() {
-            return this.isLinear ? 'U本位' : '币本位';
+            return this.isLinear ? 'U本位' : '币本位'
         },
         baseQuoteType() {
-            const match = this.position.symbol.match(/(\w+)\/(\w+):(\w+)/);
+            const match = this.position.symbol.match(/(\w+)\/(\w+):(\w+)/)
             // console.log('baseQuoteType', match);
-            return match.slice(1);
+            return match.slice(1)
         },
         isLinear() {
-            return this.baseQuoteType[2] === this.baseQuoteType[1];
+            return this.baseQuoteType[2] === this.baseQuoteType[1]
         },
         quoteCurrency() {
-            return this.baseQuoteType[2];
+            return this.baseQuoteType[2]
         },
         contractCurrency() {
-            return this.isLinear ? this.baseQuoteType[0] : this.baseQuoteType[1];
-        }
-    }
+            return this.isLinear ? this.baseQuoteType[0] : this.baseQuoteType[1]
+        },
+    },
 }
 </script>
 <template>
@@ -101,7 +101,7 @@ export default {
             <el-popconfirm class="box-item" title="确认平仓吗" confirm-button-text="确认" cancel-button-text="取消"
                 placement="top-end" @confirm="$emit('closePosition', position)">
                 <template #reference>
-                    <el-button plain type="primary" size="small" @click="">平仓</el-button>
+                    <el-button plain type="primary" size="small">平仓</el-button>
                 </template>
             </el-popconfirm>
         </div>

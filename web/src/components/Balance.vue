@@ -1,6 +1,6 @@
 <script>
-import Decimal from 'decimal.js';
-import { STABLE_COINS } from '../../../const/const';
+import Decimal from 'decimal.js'
+import { STABLE_COINS } from '../../../share/const'
 // TODO 用tickers获取last，并计算价值
 
 export default {
@@ -8,31 +8,31 @@ export default {
     props: {
         balance: {
             type: Object,
-            required: true
+            required: true,
         },
         isCurQuote: {
             type: Boolean,
-            default: false
+            default: false,
         },
     },
     data() {
         return {
-            STABLE_COINS
+            STABLE_COINS,
         }
     },
     methods: {
         formatValue(value) {
-            return value ? `\$${value}` : '';
-        }
+            return value ? `$${value}` : ''
+        },
     },
     computed: {
         isStableCoin() {
-            return Object.values(STABLE_COINS).includes(this.balance.currency);
+            return Object.values(STABLE_COINS).includes(this.balance.currency)
         },
         evaluateValue() {
-            return this.balance.evaluateValue;
-        }
-    }
+            return this.balance.evaluateValue
+        },
+    },
 }
 </script>
 <template>

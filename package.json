@@ -1,0 +1,31 @@
+{
+  "name": "trade-assistant",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sam019/trade-assistant.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sam019/trade-assistant/issues"
+  },
+  "homepage": "https://github.com/sam019/trade-assistant#readme",
+  "devDependencies": {
+    "@eslint/css": "^0.13.0",
+    "@eslint/js": "^9.38.0",
+    "@eslint/json": "^0.13.2",
+    "eslint": "^9.38.0",
+    "eslint-plugin-vue": "^10.5.1",
+    "globals": "^16.4.0"
+  },
+  "overrides": {
+    "eslint": "^9.6.0"
+  }
+}

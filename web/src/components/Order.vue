@@ -1,79 +1,79 @@
 <script>
-import Decimal from 'decimal.js';
-import { ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../const/const';
+import Decimal from 'decimal.js'
+import { ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const'
 
 export default {
     inject: ['positions'],
     props: {
         order: {
             type: Object,
-            required: true
-        }
+            required: true,
+        },
     },
     data() {
         return {
-            ORDER_AMOUNT_TYPES, POSITION_SIDES
+            ORDER_AMOUNT_TYPES, POSITION_SIDES,
         }
     },
     computed: {
         baseQuote() {
-            const match = this.order.symbol.match(/(\w+)\/(\w+):?(\w+)?/);
+            const match = this.order.symbol.match(/(\w+)\/(\w+):?(\w+)?/)
             // console.log('baseQuoteLinear', match);
-            return match.slice(1);
+            return match.slice(1)
         },
         isSpot() {
-            return !this.baseQuote[2];
+            return !this.baseQuote[2]
         },
         isLinearPerp() {
-            return this.baseQuote[2] === this.baseQuote[1];
+            return this.baseQuote[2] === this.baseQuote[1]
         },
         marketLabel() {
             if (this.isSpot) {
-                return '';
+                return ''
             }
             if (this.baseQuote[2] === this.baseQuote[1]) {
-                return 'U永续';
+                return 'U永续'
             }
-            return '币永续';
+            return '币永续'
         },
         position() {
-            return this.positions.find(pos => pos.symbol === this.order.symbol);
+            return this.positions.find(pos => pos.symbol === this.order.symbol)
         },
         // 是否平空
         isSellShort() {
-            return this.position?.side === POSITION_SIDES.SHORT;
+            return this.position?.side === POSITION_SIDES.SHORT
         },
         orderSideLabel() {
             if (this.isSpot) {
-                return '卖出';
+                return '卖出'
             }
             if (this.isSellShort) {
-                return '平空';
+                return '平空'
             }
-            return '平多';
+            return '平多'
         },
         orderAmountAsQuote() {
             if (this.isSpot) {
-                return this.order.amount;
+                return this.order.amount
 
             }
             if (this.isLinearPerp) {
-                const amountValue = new Decimal(this.order.amount).div(this.position?.contracts || 0).mul(this.position?.notional || 0).toNumber();
-                return this.order.amount + `/${amountValue}`;
+                const amountValue = new Decimal(this.order.amount).div(this.position?.contracts || 0).mul(this.position?.notional || 0).toNumber()
+                return this.order.amount + `/${amountValue}`
             }
-            const amountValue = new Decimal(this.order.amount).div(this.position?.contracts || 0).mul(this.position?.notional || 0).toNumber();
-            return this.order.amount + `/${amountValue}`;
+            const amountValue = new Decimal(this.order.amount).div(this.position?.contracts || 0).mul(this.position?.notional || 0).toNumber()
+            return this.order.amount + `/${amountValue}`
         },
         quoteCurrency() {
             if (this.isSpot) {
-                return this.baseQuote[this.order.unit === ORDER_AMOUNT_TYPES.BASE ? 0 : 1];
+                return this.baseQuote[this.order.unit === ORDER_AMOUNT_TYPES.BASE ? 0 : 1]
             }
-            return this.isLinearPerp ? this.baseQuote[1] : this.baseQuote[0];
+            return this.isLinearPerp ? this.baseQuote[1] : this.baseQuote[0]
         },
         contractCurrency() {
-            return this.isLinearPerp ? this.baseQuote[0] : this.baseQuote[1];
-        }
-    }
+            return this.isLinearPerp ? this.baseQuote[0] : this.baseQuote[1]
+        },
+    },
 }
 </script>
 <template>

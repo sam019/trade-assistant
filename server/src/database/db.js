@@ -1,5 +1,5 @@
 
-import mongoose from 'mongoose';
+import mongoose from 'mongoose'
 
 /* 委托订单 */
 const orderSchema = new mongoose.Schema({
@@ -10,29 +10,29 @@ const orderSchema = new mongoose.Schema({
     amount: Number,
     unit: String,
     state: String,
-}, { timestamps: true });
-const orderModel = mongoose.model('order', orderSchema);
+}, { timestamps: true })
+const orderModel = mongoose.model('order', orderSchema)
 
 const favoriteMarkets = new mongoose.Schema({
     exchange: String,
     symbol: String,
-});
-const favouriteMarketsModel = mongoose.model('favoriteMarkets', favoriteMarkets);
+})
+const favouriteMarketsModel = mongoose.model('favoriteMarkets', favoriteMarkets)
 
 /* 连接数据库 */
 const connectDB = async () => {
     try {
-        await mongoose.connect('mongodb://localhost:27017/trade-assistant', {});
+        await mongoose.connect('mongodb://localhost:27017/trade-assistant', {})
 
-        console.log('MongoDB connected successfully');
+        console.log('MongoDB connected successfully')
     } catch (err) {
-        console.error('MongoDB connection error:', err);
-        process.exit(1);
+        console.error('MongoDB connection error:', err)
+        process.exit(1)
     }
-};
+}
 
-export default connectDB;
+export default connectDB
 export {
     orderModel,
-    favouriteMarketsModel
+    favouriteMarketsModel,
 }

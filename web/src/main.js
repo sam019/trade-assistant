@@ -10,18 +10,18 @@ import App from './App.vue'
 
 // 解决报错 Unable to preventDefault inside passive event listener invocation
 if (typeof EventTarget !== "undefined") {
-    let func = EventTarget.prototype.addEventListener;
+    let func = EventTarget.prototype.addEventListener
     EventTarget.prototype.addEventListener = function (type, fn, capture) {
-        this.func = func;
+        this.func = func
         if (typeof capture !== "boolean") {
-            capture = capture || {};
-            capture.passive = false;
+            capture = capture || {}
+            capture.passive = false
         }
-        this.func(type, fn, capture);
-    };
+        this.func(type, fn, capture)
+    }
 }
 
-const app = createApp(App);
+const app = createApp(App)
 app.use(ElementPlus)
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component)

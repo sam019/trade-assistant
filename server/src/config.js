@@ -1,3 +1,3 @@
-import Const from '../../const/const'
+import Const from '../../share/const'
 
-export const SUPPORTED_EXCHANGES = [Const.EXCHANGES.BINANCE];
+export const SUPPORTED_EXCHANGES = [Const.EXCHANGES.BINANCE]

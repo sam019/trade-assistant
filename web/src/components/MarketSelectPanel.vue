@@ -1,7 +1,7 @@
 <script>
-import { debounce } from "lodash";
+import { debounce } from "lodash"
 
-import { MARKET_TYPES } from '../../../const/const';
+import { MARKET_TYPES } from '../../../share/const'
 
 export default {
     props: {
@@ -18,23 +18,23 @@ export default {
         return {
             keywords: "",
             curTab: "spot",
-        };
+        }
     },
     methods: {
         onClosed() {
-            this.$emit('close');
-            this.keywords = "";
+            this.$emit('close')
+            this.keywords = ""
         },
         onOpen() {
             // console.log('onOpened')
-            this.$emit('search');
+            this.$emit('search')
             this.$nextTick(() => {
-                this.$refs.input?.focus();
-            });
+                this.$refs.input?.focus()
+            })
         },
         handleKeywordsChange: debounce(function () {
-            console.log(this.keywords);
-            this.$emit('search', this.keywords);
+            console.log(this.keywords)
+            this.$emit('search', this.keywords)
         }, 500),
     },
     computed: {
@@ -43,10 +43,10 @@ export default {
                 { label: '现货', name: MARKET_TYPES.SPOT, markets: this.markets?.spot || [] },
                 { label: 'U本位永续', name: MARKET_TYPES.LINEAR, markets: this.markets?.linear || [] },
                 { label: '币本位永续', name: MARKET_TYPES.INVERSE, markets: this.markets?.inverse || [] },
-            ];
+            ]
         },
     },
-};
+}
 </script>
 <template>
     <el-dialog :model-value="visible" @closed="onClosed" @open="onOpen" style="width: 100vw; max-width: 720px">
