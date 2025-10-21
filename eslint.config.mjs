@@ -16,6 +16,8 @@ export default defineConfig([
             semi: [1, "never"],
             indent: [1, 4],
             "vue/multi-word-component-names": 0,
+            "vue/return-in-computed-property": 0,
+            "no-useless-catch": 0,
             "object-curly-spacing": [1, "always"],
             "comma-dangle": [1, "always-multiline"],
         },

@@ -1,9 +1,10 @@
 import { POSITION_SIDES, ORDER_SIDES, ORDER_STATES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 import service from '../service'
 import orderWatcher from '../monitor/orderMonitor'
 import { orderModel } from '../database/db.js'
 
-export default async function checPerpOrder(order, position) {
+export default async function checPerpSLTPOrder(order, position) {
     // console.log('checkLinearPerpOrder', order.symbol, order.slPrice, order.tpPrice)
     const { _id, symbol, amount, unit, slPrice, tpPrice, exchange } = order
     try {
@@ -16,7 +17,7 @@ export default async function checPerpOrder(order, position) {
         if (!position) {
             throw new Error('错误：无法获取symbol position：' + symbol)
         }
-        const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
+        const cSymbol = checkSymbol(symbol)
         const params = {
             exchange,
             symbol,
@@ -27,12 +28,12 @@ export default async function checPerpOrder(order, position) {
         }
         const isSlTriggered = position.side === POSITION_SIDES.LONG ? position.markPrice <= slPrice : position.markPrice >= slPrice
         const isTpTriggered = position.side === POSITION_SIDES.LONG ? position.markPrice >= tpPrice : position.markPrice <= tpPrice
-        if (slPrice && isSlTriggered) {
+        if (slPrice && isSlTriggered || global.__Force?.v()) {
             // 判断是否止损
             console.log(`触发仓位止损, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
             let result
-            if (match[3] === match[2]) {
+            if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params)
             } else {
                 result = await service.createInversePerpMarketOrder(params)
@@ -47,7 +48,7 @@ export default async function checPerpOrder(order, position) {
             console.log(`触发仓位止盈, 交易所:${exchange} 交易对:${symbol} 触发价格:${tpPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
             let result
-            if (match[3] === match[2]) {
+            if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params)
             } else {
                 result = await service.createInversePerpMarketOrder(params)

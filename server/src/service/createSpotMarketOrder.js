@@ -7,7 +7,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建现货市价单
 export default async function createSpotMarketOrder(data) {
-    const { exchange, symbol, side, amount, unit, usePct, amountPct, withSLTP, slPrice, tpPrice, __force } = data
+    const { exchange, symbol, side, amount, unit, usePct, amountPct, withSLTP, slPrice, tpPrice } = data
     /* todo 校验 */
     const market = getExchangeMonitor(exchange).markets.spot.find(mar => mar.symbol === symbol)
     if (!market) {
@@ -34,6 +34,7 @@ export default async function createSpotMarketOrder(data) {
     const sltpParams = {
         exchange,
         symbol,
+        type: ORDER_TYPES.SLTP,
     }
     if (withSLTP) {
         if (!slPrice && !tpPrice) {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 
 import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 // import { orderModel } from "../database/db";
@@ -24,7 +25,7 @@ app.post('/close', async function closePosition(c) {
     }
     // const result = await getExchangeMonitor(exchange).exchange.closePosition(symbol);
     const side = position.side === POSITION_SIDES.LONG ? ORDER_SIDES.SELL : ORDER_SIDES.BUY
-    const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
+    const cSymbol = checkSymbol(symbol)
     const params = {
         exchange,
         symbol,
@@ -34,7 +35,7 @@ app.post('/close', async function closePosition(c) {
         reduceOnly: true,
     }
     let result
-    if (match[3] === match[2]) {
+    if (cSymbol.isLinear) {
         result = await service.createLinearPerpMarketOrder(params)
     } else {
         result = await service.createInversePerpMarketOrder(params)

@@ -1,9 +1,10 @@
 import { Hono } from 'hono'
 // import { ORDER_TYPES, ORDER_SIDES, POSITION_SIDES, EXCHANGES } from '../../../share/const.js';
 import { ORDER_TYPES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-// import orderWatcher from '../monitor/orderMonitor.js'
+import orderWatcher from '../monitor/orderMonitor.js'
 import { orderModel } from "../database/db"
 
 import service from '../service'
@@ -28,42 +29,47 @@ app.post('/create', async function(c) {
     }
     console.log('create order', symbol, type)
 
-    const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
-    const isSpot = !match[3]
-    const isLinearPerp = match[3] === match[2]
-    const isInversePerp = match[3] === match[1]
+    const cSymbol = checkSymbol(symbol)
 
-    if (isSpot) {
+    if (cSymbol.isSpot) {
         if (type === ORDER_TYPES.MARKET) {
             const result = await service.createSpotMarketOrder(body)
             return c.json(result)
         }
         if (type === ORDER_TYPES.SLTP) {
-            const result = await service.createSpotMarketSLTPOrder(body)
+            const result = await service.createSpotSLTPOrder(body)
             return c.json(result)
         }
         if (type === ORDER_TYPES.CONDITION) {
-            const result = await service.createSpotMarketConditionOrder(body)
+            const result = await service.createSpotConditionOrder(body)
             return c.json(result)
         }
     }
-    if (isLinearPerp) {
+    if (cSymbol.isLinear) {
         if (type === ORDER_TYPES.MARKET) {
             const result = await service.createLinearPerpMarketOrder(body)
             return c.json(result)
         }
         if (type === ORDER_TYPES.SLTP) {
-            const result = await service.createPerpMarketSLTPOrder(body)
+            const result = await service.createPerpSLTPOrder(body)
+            return c.json(result)
+        }
+        if (type === ORDER_TYPES.CONDITION) {
+            const result = await service.createPerpConditionOrder(body)
             return c.json(result)
         }
     }
-    if (isInversePerp) {
+    if (cSymbol.isInverse) {
         if (type === ORDER_TYPES.MARKET) {
             const result = await service.createInversePerpMarketOrder(body)
             return c.json(result)
         }
         if (type === ORDER_TYPES.SLTP) {
-            const result = await service.createPerpMarketSLTPOrder(body)
+            const result = await service.createPerpSLTPOrder(body)
+            return c.json(result)
+        }
+        if (type === ORDER_TYPES.CONDITION) {
+            const result = await service.createPerpConditionOrder(body)
             return c.json(result)
         }
     }
@@ -81,8 +87,30 @@ app.post('/delete', async function deleteOrder(c) {
 })
 
 app.post('/list', async function listOrder(c) {
-    const result = await orderModel.find()
+    const result = await orderWatcher.findOpeningOrders()
     return c.json(result)
+})
+
+app.post('/__forceT', async function __forceT(c) {
+    if (process.env.TESTNET) {
+        if (!global.__Force) {
+            global.__Force = (() => {
+                let force
+                return {
+                    v: () => force,
+                    f: () => {
+                        force = true
+                    },
+                    c: () => {
+                        force = false
+                    },
+                }
+            })()
+        }
+        global.__Force.f()
+        setTimeout(() => global.__Force?.c(), 5000)
+    }
+    return c.json({ __force: global.__Force?.v() })
 })
 
 export default app

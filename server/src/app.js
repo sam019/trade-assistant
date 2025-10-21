@@ -13,6 +13,9 @@ import positionRoute from "./api/position.js"
 
 import socketHandler from "./api/socketHandler.js"
 
+
+global.isDev = process.env.NODE_ENV !== 'production'
+
 async function init() {
     await connectDB()
     monitor.start()

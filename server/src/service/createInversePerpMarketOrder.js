@@ -7,17 +7,16 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 export default async function createInversePerpMarketOrder(data) {
-    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, __force } = data
+    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
     // 如果当前有仓位并且仓位方向和下单放下相反，判断为减仓单
     const isReduce = !!position && ((side === ORDER_SIDES.BUY && position.side === POSITION_SIDES.SHORT) || (side === ORDER_SIDES.SELL && position.side === POSITION_SIDES.LONG))
 
-    let { longLeverage: realLeverage } = Object.values(await getExchangeMonitor(exchange).fetchLeverages([symbol]))[0]
+    const { longLeverage: realLeverage } = Object.values(await getExchangeMonitor(exchange).fetchLeverages([symbol]))[0]
     if (leverage) {
         if (leverage !== realLeverage) {
-            await getExchangeMonitor(exchange).exchange.setLeverage(leverage, symbol)
-            realLeverage = leverage
+            throw new Error('错误: 杠杆参数不一致')
         }
     }
     if (reduceOnly && !position) {
@@ -33,6 +32,7 @@ export default async function createInversePerpMarketOrder(data) {
     const sltpParams = {
         exchange,
         symbol,
+        type: ORDER_TYPES.SLTP,
         slPrice,
         tpPrice,
     }

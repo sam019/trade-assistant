@@ -186,7 +186,7 @@ class ExchangeModel {
                     this.positions = await this.watchPositions()
                     // console.log('startWatchPositions', this.positions)
                     const positionSymbols = this.positions.map(pos => pos.symbol)
-                    if (!_.isEqual(positionSymbols, this.positionSymbols)) {
+                    if (_.xor(positionSymbols, this.positionSymbols).length) {
                         this.positionSymbols = positionSymbols
                         this.leverages = await this.fetchLeverages(positionSymbols)
                     }

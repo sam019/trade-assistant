@@ -1,12 +1,13 @@
 import Decimal from 'decimal.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_AMOUNT_TYPES } from '../../../share/const.js'
+import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from '../../../share/const.js'
 import { getPrecisionLength } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
+import { orderModel } from "../database/db"
 
-// 创建现货止盈止损委托
-export default async function createSpotMarketSLTPOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, __force } = data
+// 创建现货止盈止损委托（止盈止损委托负责卖）
+export default async function createSpotSLTPOrder(data) {
+    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id } = data
     if (!slPrice && !tpPrice) {
         throw new Error('止盈止损触发价格设置错误')
     }
@@ -18,6 +19,7 @@ export default async function createSpotMarketSLTPOrder(data) {
     const params = {
         exchange,
         symbol,
+        type: ORDER_TYPES.SLTP,
         amount,
         unit,
     }
@@ -50,6 +52,11 @@ export default async function createSpotMarketSLTPOrder(data) {
             throw new Error('止盈触发价格设置错误')
         }
     }
-    const order = await orderWatcher.creatOrder(params)
+    let order
+    if (id) {
+        order = await orderModel.findByIdAndUpdate(id, params)
+    } else {
+        order = await orderWatcher.creatOrder(params)
+    }
     return order
 }

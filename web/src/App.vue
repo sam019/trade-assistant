@@ -1,11 +1,12 @@
 <script>
 // import { ElMessage } from '@hc/element-plus'
 import { computed } from 'vue'
-import _, { reduce } from 'lodash'
+import _ from 'lodash'
 import { ElLoading } from 'element-plus'
 import Decimal from 'decimal.js'
 
 import { MARKET_TYPES, ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, MARGIN_MODES, POSITION_SIDES, STABLE_COINS } from '../../share/const'
+import { checkSymbol } from '../../share/utils'
 
 import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
@@ -14,10 +15,6 @@ import Order from './components/Order.vue'
 
 import * as service from './services/service'
 import socket from './services/socket'
-
-function strip(num, precision = 15) {
-    return +parseFloat(num.toPrecision(precision))
-}
 
 export default {
     provide() {
@@ -54,6 +51,7 @@ export default {
             orderWithSLTP: false, // 市价单是否带止盈止损
             slPrice: null, // 市价单附带的止损触发价
             tpPrice: null, // 市价单附带的止盈触发价
+            triggerPrice: null, // 条件委托的触发价
 
             ORDER_TYPES,
             ORDER_SIDES,
@@ -143,11 +141,20 @@ export default {
         },
         async searchMarkets(keywords) {
             // console.log('searchMarkets', keywords)
+            if (!keywords) {
+                if (this.defaultMarkets) {
+                    this.markets = this.defaultMarkets
+                    return
+                }
+            }
             const res = await service.searchMarkets(this.exchange, keywords)
+            if (!keywords) {
+                this.defaultMarkets = res
+            }
             // console.log('searchMarkets', res)
             this.markets = res
         },
-        async changeMarketFavorite(market) {
+        async toggleMarketFavorite(market) {
             try {
                 if (!market.isFavorite) {
                     await service.addFavouriteMarket(this.exchange, market.symbol)
@@ -249,6 +256,7 @@ export default {
                     reduceOnly: this.reduceOnly,
                     tpPrice: this.tpPrice,
                     slPrice: this.slPrice,
+                    triggerPrice: this.triggerPrice,
                     id: this.orderId,
                     // __force: true,
                 })
@@ -257,6 +265,7 @@ export default {
                     message: '下单成功',
                     type: 'success',
                 })
+                this.resetForm(true)
             } catch (e) {
                 console.log(e)
                 this.$message({
@@ -268,25 +277,30 @@ export default {
             }
         },
         validateForm() {
+            if (!this.orderAmount) return false
             if (this.orderType === ORDER_TYPES.MARKET) {
-                if (!this.orderAmount) return false
                 if (this.orderWithSLTP && !this.slPrice && !this.tpPrice) return false
                 return true
             }
             if (this.orderType === ORDER_TYPES.SLTP) {
-                if (!this.orderAmount) return false
                 if (!this.slPrice && !this.tpPrice) return false
                 return true
             }
+            if (this.orderType === ORDER_TYPES.CONDITION) {
+                if (!this.triggerPrice) return false
+                if (this.orderWithSLTP && !this.slPrice && !this.tpPrice) return false
+                return true
+            }
         },
-        resetForm(onlyResetValue = false) {
+        resetForm(notResetUnit = false) {
             this.orderAmount = null
             this.orderAmountPct = 0
             this.orderUsePct = false
             this.orderWithSLTP = false
             this.tpPrice = null
             this.slPrice = null
-            if (!onlyResetValue) {
+            this.triggerPrice = null
+            if (!notResetUnit) {
                 this.orderAmountUnit = ORDER_AMOUNT_TYPES.QUOTE
             }
             this.orderId = null
@@ -307,11 +321,19 @@ export default {
             }
         },
         isSideDisabled(side) {
-            if (this.orderType !== ORDER_TYPES.SLTP) return false
-            if (this.isSpotMarket) {
-                return side === ORDER_SIDES.BUY
+            if (this.orderType === ORDER_TYPES.MARKET) return false
+            if (this.orderType === ORDER_TYPES.SLTP) {
+                if (this.isSpotMarket) {
+                    return side === ORDER_SIDES.BUY
+                }
+                return this.curPosition && ((this.reduceOnly && side !== this.orderSide) || (!this.reduceOnly && side === this.orderSide))
             }
-            return this.curPosition && ((this.reduceOnly && side !== this.orderSide) || (!this.reduceOnly && side === this.orderSide))
+            if (this.orderType === ORDER_TYPES.CONDITION) {
+                if (this.isSpotMarket) {
+                    return side === ORDER_SIDES.SELL
+                }
+                return this.curPosition && ((this.reduceOnly && side === this.orderSide) || (!this.reduceOnly && side !== this.orderSide))
+            }
         },
         getPrecisionByUnit(unit) {
             // console.log(this.market?.precision, this.market.precision, unit)
@@ -330,7 +352,7 @@ export default {
         backTop() {
             window.scrollTo(0, 0)
         },
-        async handleSLTPPosition(position) {
+        async setPositionSLTP(position) {
             if (this.market.symbol !== position.symbol) {
                 const market = await service.getMarket(this.exchange, position.symbol)
                 this.changeMarket(market)
@@ -347,9 +369,11 @@ export default {
                 this.changeMarket(market)
             }
             this.orderId = order._id
-            this.orderType = ORDER_TYPES.SLTP
+            this.orderType = order.type || ORDER_TYPES.SLTP
             this.slPrice = order.slPrice
             this.tpPrice = order.tpPrice
+            this.orderWithSLTP = order.withSLTP
+            this.triggerPrice = order.triggerPrice
             
             if (this.isSpotMarket) {
                 this.orderAmountUnit = order.unit
@@ -367,14 +391,22 @@ export default {
         handleOrderTypeChange(value) {
             this.orderType = value
             if (this.isSpotMarket) {
-                if (this.orderType === ORDER_TYPES.SLTP) {
+                if (this.orderType === ORDER_TYPES.CONDITION) {
+                    this.handleSideChange(ORDER_SIDES.BUY)
+                } else if (this.orderType === ORDER_TYPES.SLTP) {
                     this.handleSideChange(ORDER_SIDES.SELL)
                 } else {
                     this.handleSideChange(ORDER_SIDES.BUY)
                 }
             } else {
                 // this.handleSideChange(this.reduceOnly ? );
-                this.curPosition && !this.reduceOnly && this.handleSideChange(Object.values(ORDER_SIDES).find(s => s !== this.orderSide))
+                if (this.orderType === ORDER_TYPES.CONDITION) {
+                    this.curPosition && this.reduceOnly && this.handleSideChange(Object.values(ORDER_SIDES).find(s => s !== this.orderSide))
+                } else if (this.orderType === ORDER_TYPES.SLTP) {
+                    this.curPosition && !this.reduceOnly && this.handleSideChange(Object.values(ORDER_SIDES).find(s => s !== this.orderSide))
+                } else {
+                    this.handleSideChange(ORDER_SIDES.BUY)
+                }
             }
             this.resetForm()
         },
@@ -411,6 +443,7 @@ export default {
             return {
                 [ORDER_TYPES.MARKET]: '市价',
                 [ORDER_TYPES.SLTP]: '止盈止损',
+                [ORDER_TYPES.CONDITION]: '条件委托',
             }
         },
         curSymbol() {
@@ -712,12 +745,9 @@ export default {
         },
         positions() {
             return this.exchangeAccount?.positions?.slice().sort((a, b) => {
-                const matchReg = /(\w+)\/(\w+):?(\w+)?/
-                const aMatch = matchReg.exec(a.symbol)
-                const aValue = aMatch[3] === aMatch[2] ? a.notional : a.contracts * a.contractSize
+                const aValue = checkSymbol(a.symbol).isLinear ? a.notional : a.contracts * a.contractSize
 
-                const bMatch = matchReg.exec(b.symbol)
-                const bValue = bMatch[3] === bMatch[2] ? b.notional : b.contracts * b.contractSize
+                const bValue = checkSymbol(b.symbol).isLinear ? b.notional : b.contracts * b.contractSize
                 return bValue - aValue
             }) || []
         },
@@ -740,7 +770,7 @@ export default {
     watch: {
         symbolsNeedTicker(newVal, oldVal) {
             // console.log('symbolsNeedTicker', newVal, oldVal)
-            if (_.isEqual(newVal, oldVal)) return
+            if (!_.xor(newVal, oldVal).length) return
             socket.subscribeTickers(this.exchange, this.symbolsNeedTicker, (tickers) => {
                 // console.log('tickersUpdate', this.symbolsNeedTicker, this.market.symbol, tickers);
                 this.tickers = tickers
@@ -755,7 +785,7 @@ export default {
 
 <template>
     <MarketSelectPanel :visible="dialogVisible" @close="closeDialog" @search="searchMarkets"
-        @favorite="changeMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
+        @favorite="toggleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
     <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px;">
         <!-- 选择交易所 -->
         <el-col style="flex-basis: 200px">
@@ -825,6 +855,11 @@ export default {
             </template>
         </el-col>
     </el-row>
+    <!-- 条件委托触发价格 -->
+    <div v-show="orderType === ORDER_TYPES.CONDITION" style="display: flex; flex-direction: column; padding: 0 10px;">
+        <el-input v-model="triggerPrice" type="number" clearable :controls="false" :min="0"
+            :placeholder="`触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
+    </div>
     <!-- 止盈止损触发价格 -->
     <div v-show="orderType === ORDER_TYPES.SLTP" style="display: flex; flex-direction: column; padding: 0 10px;">
         <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
@@ -893,7 +928,7 @@ export default {
                 </Order>
             </template>
             <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition"
-                @sltp="handleSLTPPosition" @jump-market="handleJumpMarket">
+                @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
             </Position>
             <Balance v-for="item in balances" :key="item.currency" :balance="item"
                 :isCurQuote="item.currency === market.quote" @jump-market="handleJumpMarket">
@@ -901,7 +936,7 @@ export default {
         </el-tab-pane>
         <el-tab-pane :label="`仓位(${positions?.length})`">
             <Position v-for="item in positions" :key="item.symbol" :position="item"
-                @close-position="handleClosePosition" @sltp="handleSLTPPosition" @jump-market="handleJumpMarket">
+                @close-position="handleClosePosition" @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
             </Position>
         </el-tab-pane>
         <el-tab-pane :label="`委托(${orders.length})`">

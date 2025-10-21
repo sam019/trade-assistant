@@ -6,9 +6,9 @@ import { getPrecisionLength } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import { orderModel } from "../database/db"
 
-// 创建合约止盈止损委托
-export default async function createPerpMarketSLTPOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id, __force } = data
+// 创建合约止盈止损委托（止盈止损委托负责卖）
+export default async function createPerpSLTPOrder(data) {
+    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id } = data
     const { linear, inverse } = getExchangeMonitor(exchange).markets
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol)
     const position = getExchangeMonitor(exchange).positions?.find(pos => pos.symbol === symbol)
@@ -42,6 +42,7 @@ export default async function createPerpMarketSLTPOrder(data) {
     const params = {
         exchange,
         symbol,
+        type: ORDER_TYPES.SLTP,
         amount,
         unit,
         slPrice,

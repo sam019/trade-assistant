@@ -1,15 +1,19 @@
 
 import createSpotMarketOrder from "./createSpotMarketOrder"
-import createSpotMarketSLTPOrder from "./createSpotMarketSLTPOrder"
+import createSpotSLTPOrder from "./createSpotSLTPOrder"
 import createLinearPerpMarketOrder from "./createLinearPerpMarketOrder"
-import createPerpMarketSLTPOrder from "./createPerpMarketSLTPOrder"
+import createPerpSLTPOrder from "./createPerpSLTPOrder"
 import createInversePerpMarketOrder from "./createInversePerpMarketOrder"
+import createSpotConditionOrder from "./createSpotConditionOrder"
+import createPerpConditionOrder from "./createPerpConditionOrder"
 
 
 export default {
     createLinearPerpMarketOrder,
     createSpotMarketOrder,
-    createSpotMarketSLTPOrder,
-    createPerpMarketSLTPOrder,
+    createSpotSLTPOrder,
+    createPerpSLTPOrder,
     createInversePerpMarketOrder,
+    createSpotConditionOrder,
+    createPerpConditionOrder,
 }

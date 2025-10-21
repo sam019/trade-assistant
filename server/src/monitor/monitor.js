@@ -4,8 +4,13 @@ import { SUPPORTED_EXCHANGES } from '../config.js'
 import { initExchangeMonitor, getExchangeMonitor } from './exchangeMonitor.js'
 import orderWatcher from './orderMonitor'
 
-import checkSpotOrder from '../checker/checkSpotOrder.js'
-import checkPerpOrder from '../checker/checkPerpOrder.js'
+import checkSpotSLTPOrder from '../checker/checkSpotSLTPOrder.js'
+import checkPerpSLTPOrder from '../checker/checkPerpSLTPOrder.js'
+import checkSpotCondOrder from '../checker/checkSpotCondOrder.js'
+import checkPerpCondOrder from '../checker/checkPerpCondOrder.js'
+
+import { ORDER_TYPES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 
 class Monitor {
     /* 后台监控主函数 */
@@ -23,34 +28,55 @@ class Monitor {
         let unsubs = []
         // 订阅订单更新时，以交易所为粒度，重新订阅相关交易对的行情更新和仓位更新
         orderWatcher.onOrdersUpdate(({ ordersGroupByExchange }) => {
+            global.__Force?.c()
             // console.log('orders update', orders);
             // 先取消之前的订阅
             unsubs.forEach(unsub => unsub && unsub())
             unsubs = []
             Object.entries(ordersGroupByExchange).forEach(([exchange, { spot, linear, inverse }]) => {
                 // console.log('ordersGroupByExchange', exchange, spot, linear);
-                // 检测现货仓位
-                const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(spot.symbols, (tickers) => {
+                const tickOrders = [...spot.orders]
+                const positionOrders = [];
+                [...linear.orders, ...inverse.orders].forEach(order => {
+                    if (order.type === ORDER_TYPES.CONDITION) {
+                        tickOrders.push(order)
+                    } else {
+                        positionOrders.push(order)
+                    }
+                })
+                // 检测现货止盈止损和条件委托 合约条件委托
+                const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
                     // console.log(orders)
-                    spot.orders.forEach((order) => {
+                    tickOrders.forEach((order) => {
                         // console.log(order.symbol)
-                        if (tickers[order.symbol]) {
-                            checkSpotOrder(order, tickers[order.symbol])
+                        const ticker = tickers[order.symbol]
+                        if (ticker) {
+                            const cSymbol = checkSymbol(order.symbol)
+                            if (cSymbol.isSpot) {
+                                if (order.type === ORDER_TYPES.CONDITION) {
+                                    checkSpotCondOrder(order, ticker)
+                                } else {
+                                    checkSpotSLTPOrder(order, ticker)
+                                }
+                            } else {
+                                if (order.type === ORDER_TYPES.CONDITION) {
+                                    checkPerpCondOrder(order, ticker)
+                                }
+                            }
                         }
                     })
                 })
                 unsubs.push(unsubTicker)
-                // 检测合约仓位
+                // 检测合约止盈止损
                 const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
                     // console.log(positions);
-                    [...linear.orders, ...inverse.orders].forEach((order) => {
+                    positionOrders.forEach((order) => {
                         // console.log(order.symbol, match)
                         const position = positions.find(pos => pos.symbol === order.symbol)
                         if (position) {
-                            checkPerpOrder(order, position)
+                            checkPerpSLTPOrder(order, position)
                         }
                     })
-                    inverse.orders.forEach((order) => order)
                 })
                 unsubs.push(unsubPosition)
             })
