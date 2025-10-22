@@ -97,15 +97,15 @@ export default {
         <div class="row1">
             <div style="display: flex; gap: 5px; align-items: center;">
                 <template v-if="cSymbol.isSpot || isConditionOrder">
-                    <el-tag type="info" style="color: white" effect="plain" size="small"
-                        @click="$emit('jumpMarket', order.symbol)">{{ order.symbol }}</el-tag>
+                    <el-tag :type="cSymbol.isSpot ? 'info' : cSymbol.isLinear ? 'primary' : 'warning'" effect="dark"
+                        size="small" @click="$emit('jumpMarket', order.symbol)">{{ order.symbol }}</el-tag>
                     <div class="tags">
                         <el-tag :type="tagType" size="small">{{ orderTypeLabel }}</el-tag>
                         <el-tag :type="tagType" size="small">{{ orderSideLabel }}</el-tag>
                     </div>
                 </template>
                 <template v-else-if="position">
-                    <el-tag :type="cSymbol.isLinear ? 'primary' : 'warning'"
+                    <el-tag :type="cSymbol.isLinear ? 'primary' : 'warning'" effect="dark"
                         @click="$emit('jumpMarket', order.symbol)">{{ order.symbol }}</el-tag>
                     <div class="tags">
                         <el-tag :type="tagType" size="small">{{ orderTypeLabel }}</el-tag>
@@ -113,7 +113,7 @@ export default {
                     </div>
                 </template>
                 <div v-else style="padding: 5px 0;">
-                    <el-tag :type="cSymbol.isLinear ? 'primary' : 'warning'">{{ order.symbol }}</el-tag>
+                    <el-tag :type="cSymbol.isLinear ? 'primary' : 'warning'" effect="dark">{{ order.symbol }}</el-tag>
                     <span style="margin-left: 5px;">未检测到仓位</span>
                 </div>
             </div>
@@ -130,9 +130,7 @@ export default {
                     <div class="value">{{ order.triggerPrice || '-' }}</div>
                 </div>
                 <div>
-                    <div class="label">委托数量({{
-                        quoteCurrency }})
-                    </div>
+                    <div class="label">委托数量({{ quoteCurrency }})</div>
                     <div class="value">{{ orderAmountAsQuote }}</div>
                 </div>
             </div>
@@ -157,8 +155,8 @@ export default {
                 <div class="value">{{ order.slPrice || '-' }}</div>
             </div>
             <div>
-                <div class="label">委托数量(<template v-if="!cSymbol.isSpot">{{ contractCurrency }}/</template>{{
-                    quoteCurrency }})
+                <div class="label">委托数量
+                    (<template v-if="!cSymbol.isSpot">{{ contractCurrency }}/</template>{{ quoteCurrency }})
                 </div>
                 <div class="value">{{ orderAmountAsQuote }}</div>
             </div>
@@ -197,6 +195,9 @@ export default {
 
 .label {
     color: gray;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .value {

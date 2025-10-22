@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 import { favouriteMarketsModel } from "../database/db"
 import { getExchangeMonitor  } from '../monitor/exchangeMonitor.js'
+import { sleep } from '../../../share/utils.js'
 
 const app = new Hono()
 
@@ -77,11 +78,14 @@ app.post('/search', async function searchMarkets(c) {
 app.post('/get', async function getrMarket(c) {
     const body = await c.req.json()
     const { exchange, symbol } = body
-    const exchangeMonitor = getExchangeMonitor(exchange)
-    const market = exchangeMonitor.exchange.markets[symbol]
-    // console.log('get market', market)
-    return c.json(market)
-    
+    while (true) {
+        const market = getExchangeMonitor(exchange).exchange.markets[symbol]
+        if (market) {
+            // console.log('get market', market)
+            return market
+        }
+        sleep(1000)
+    }
 })
 
 app.post('/addFavorite', async function addFavoriteMarket(c) {

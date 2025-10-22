@@ -12,3 +12,7 @@ export function checkSymbol(symbol) {
         quote: match[2],
     }
 }
+
+export async function sleep(time = 0, signTime = 0) {
+    return new Promise(res => setTimeout(() => res(), signTime ? time - signTime : time))
+}

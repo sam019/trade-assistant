@@ -1,4 +1,4 @@
-import { isNumber } from 'lodash-es'
+import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor'
@@ -6,6 +6,31 @@ import { orderModel } from '../database/db'
 import service from '../service'
 import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
 import { checkSymbol } from '../../../share/utils.js'
+
+function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol, cSymbol }) {
+    let realAmount = amount, realUnit = unit
+    //判断余额
+    if (!balance) {
+        console.log('无法获取余额数据，尝试直接下单')
+    } else if (!balance.free) {
+        console.log('委托订单余额为0，已自动取消')
+        orderWatcher.closeOrder(_id)
+        // orderWatcher.unmarkOrderDealing(_id)
+        return
+    } else if (unit === ORDER_AMOUNT_TYPES.QUOTE) {
+        if (amount > balance.free) {
+            realAmount = balance.free
+            console.log(`委托订单余额不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 买入数量:${realAmount}${cSymbol[realUnit]}`)
+        }
+    } else {
+        if (new Decimal(amount).div(lastPrice).toNumber() > balance.free) {
+            realAmount = balance.free
+            realUnit = ORDER_AMOUNT_TYPES.QUOTE
+            console.log(`止盈止损订单数量不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 卖出数量:${realAmount}${cSymbol[realUnit]}`)
+        }
+    }
+    return { realAmount, realUnit }
+}
 
 export default async function checkSpotSLTPOrder(order, ticker) {
     const { _id, symbol, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice } = order
@@ -19,33 +44,19 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         }
         console.log('check order', triggerPrice, lastPrice)
         const cSymbol = checkSymbol(symbol)
-        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol[unit]]
+        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]
         // console.log(getExchangeMonitor(exchange).balance.spot[currency])
         if (lastPrice <= triggerPrice || global.__Force?.v()) {
             console.log(`触发条件委托订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             orderWatcher.markOrderDealing(_id)
-            let realAmount = amount
-            //判断余额
-            if (isNumber(balance?.free)) {
-                if (!balance.free) {
-                    console.log('委托订单余额为0，已自动取消')
-                    await orderWatcher.closeOrder(_id)
-                    // orderWatcher.unmarkOrderDealing(_id)
-                    return
-                }
-                if (balance.free < amount) {
-                    realAmount = balance.free
-                    console.log(`委托订单余额不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 买入数量:${realAmount}${cSymbol[unit]}`)
-                }
-            } else {
-                // throw new Error('止损订单检测错误：无法获取余额');
-                console.log('无法获取余额数据，尝试直接下单')
-            }
+            
+            const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
+
             const result = await service.createSpotMarketOrder({
                 exchange,
                 symbol,
                 amount: realAmount,
-                unit,
+                unit: realUnit,
                 side: ORDER_SIDES.BUY,
                 withSLTP,
                 slPrice,

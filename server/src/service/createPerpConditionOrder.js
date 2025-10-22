@@ -4,7 +4,6 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
 import { getPrecisionLength, checkSymbol } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
-import { orderModel } from "../database/db"
 
 // 创建合约条件委托（条件委托负责买）
 export default async function createPerpConditionOrder(data) {
@@ -91,10 +90,10 @@ export default async function createPerpConditionOrder(data) {
             }
         }
     }
-    console.log('createPerpMarketConditionOrder', params)
+    // console.log('createPerpMarketConditionOrder', params)
     let order
     if (id) {
-        order = await orderModel.findByIdAndUpdate(id, params)
+        order = await orderWatcher.updateOrder(id, params)
     } else {
         order = await orderWatcher.creatOrder(params)
     }

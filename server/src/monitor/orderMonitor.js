@@ -30,7 +30,7 @@ export class OrderWatcher {
                 this.orderStaus.delete(key)
             }
         })
-        this.cbs.forEach(cb => cb && cb(this))
+        this.cbs.forEach(cb => cb && cb({ orders: this.orders, ordersGroupByExchange: this.ordersGroupByExchange }))
     }
     _groupOrdersByExchange() {
         const ordersGroupByExchange = {}
@@ -108,6 +108,10 @@ export class OrderWatcher {
         })
         await order.save()
         return order
+    }
+
+    async updateOrder(id, data) {
+        return await orderModel.findByIdAndUpdate(id, data)
     }
 
     async resolveOrder(_id) {

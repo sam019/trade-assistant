@@ -1,13 +1,49 @@
 import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
-import { getPrecisionLength } from '../../../share/utils.js'
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, TWAP_INTERVAL } from '../../../share/const.js'
+import { getPrecisionLength, sleep } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
+
+async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, market }) {
+    const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
+
+    let remainQuantity = params.quoteOrderQty || params.quantity, sltpOrder
+    let quantityStep = Math.max(new Decimal(params.quantity).div(stepNum).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber(), market.precision.amount)
+    while (remainQuantity > 0) {
+        if (params.quoteOrderQty) {
+            const lastTicker = await getExchangeMonitor(exchange).awaitTickersUpdate([symbol])
+            const lastPrice = lastTicker[0] && lastTicker[0].last || 0
+            const stepMinQuote = new Decimal(market.precision.amount).mul(lastPrice).toNumber()
+            quantityStep = Math.max(new Decimal(params.quoteOrderQty).div(stepNum).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber(), stepMinQuote)
+        }
+        const stepParmas = {
+            [params.quoteOrderQty ? 'quoteOrderQty' : 'quantity']: remainQuantity < new Decimal(quantityStep).mul(2).toNumber() ? remainQuantity : quantityStep,
+        }
+        try {
+            console.log(`创建市价单(TWAP): ${exchange} ${symbol} ${Object.keys(stepParmas)[0]}:${stepParmas.quoteOrderQty || stepParmas.quantity}`)
+            const sign = Date.now()
+            const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, stepParmas)
+            // todo 向前端推送twap进度
+            remainQuantity -= params.quoteOrderQty ? result.cost : result.filled
+            if (withSLTP) {
+                if (!sltpOrder) {
+                    sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: result.filled, unit: ORDER_AMOUNT_TYPES.BASE })
+                } else {
+                    sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: sltpOrder.amount + result.filled })
+                }
+            }
+            await sleep(TWAP_INTERVAL, sign)
+        } catch (e) {
+            console.log(e)
+            throw e
+        }
+    }
+}
 
 // 创建现货市价单
 export default async function createSpotMarketOrder(data) {
-    const { exchange, symbol, side, amount, unit, usePct, amountPct, withSLTP, slPrice, tpPrice } = data
+    const { exchange, symbol, side, amount, unit, usePct, amountPct, withSLTP, slPrice, tpPrice, withTWAP, totalMinute } = data
     /* todo 校验 */
     const market = getExchangeMonitor(exchange).markets.spot.find(mar => mar.symbol === symbol)
     if (!market) {
@@ -56,6 +92,13 @@ export default async function createSpotMarketOrder(data) {
                 throw new Error('无效的止盈价格')
             }
         }
+    }
+    if (withTWAP) {
+        if (totalMinute < 1) {
+            throw new Error('TWAP总时间不能少于1分钟')
+        }
+        createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, market })
+        return
     }
     console.log('创建市价单', exchange, symbol, side, params.quantity || params.quoteOrderQty, params.quantity ? market.base : market.quote)
 

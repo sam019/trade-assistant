@@ -4,7 +4,6 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
 import { getPrecisionLength } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
-import { orderModel } from "../database/db"
 
 export default async function createSpotConditionOrder(data) {
     const { exchange, symbol, amount, unit, usePct, amountPct, triggerPrice, withSLTP, slPrice, tpPrice, id } = data
@@ -63,7 +62,7 @@ export default async function createSpotConditionOrder(data) {
     }
     let order
     if (id) {
-        order = await orderModel.findByIdAndUpdate(id, params)
+        order = await orderWatcher.updateOrder(id, params)
     } else {
         order = await orderWatcher.creatOrder(params)
     }

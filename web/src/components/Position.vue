@@ -70,11 +70,11 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">持仓数量 ({{ contractCurrency }}/{{ quoteCurrency }})</div>
+                <div class="label">持仓数量({{ contractCurrency }}/{{ quoteCurrency }})</div>
                 <div class="value">{{ position.contracts * position.contractSize }}/{{ position.notional }}</div>
             </div>
             <div>
-                <div class="label">保证金 ({{ quoteCurrency }})</div>
+                <div class="label">保证金({{ quoteCurrency }})</div>
                 <div class="value">{{ position.initialMargin }}</div>
             </div>
             <div>
@@ -84,15 +84,15 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">开仓价格 ({{ baseQuoteType[1] }})</div>
+                <div class="label">开仓价格({{ baseQuoteType[1] }})</div>
                 <div class="value">{{ position.entryPrice }}</div>
             </div>
             <div>
-                <div class="label">标记价格 ({{ baseQuoteType[1] }})</div>
+                <div class="label">标记价格({{ baseQuoteType[1] }})</div>
                 <div class="value">{{ position.markPrice }}</div>
             </div>
             <div>
-                <div class="label">强平价格 ({{ baseQuoteType[1] }})</div>
+                <div class="label">强平价格({{ baseQuoteType[1] }})</div>
                 <div class="value">{{ position.liquidationPrice }}</div>
             </div>
         </div>
@@ -114,45 +114,57 @@ export default {
     text-align: left;
     font-size: 12px;
 }
+
 .summary {
     display: flex;
     align-items: center;
     margin-bottom: 5px;
     gap: 5px;
 }
+
 .pnl {
     font-size: 14px;
 }
+
 .profit {
     color: green;
 }
+
 .loss {
     color: red;
 }
+
 .row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin: 5px 0;
     gap: 5px;
-    & > div {
+
+    &>div {
         flex: 1 1 0;
         overflow: hidden;
     }
 }
+
 .label {
     color: gray;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
+
 .value {
     overflow: hidden;
     text-overflow: ellipsis;
-    
 }
+
 .control {
     display: flex;
+
     /* align-items: center; */
     /* justify-content: space-around; */
-    & > button {
+    &>button {
         flex: 1 1 0;
     }
 }

@@ -3,7 +3,6 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from '../../../share/const.js'
 import { getPrecisionLength } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
-import { orderModel } from "../database/db"
 
 // 创建现货止盈止损委托（止盈止损委托负责卖）
 export default async function createSpotSLTPOrder(data) {
@@ -54,7 +53,7 @@ export default async function createSpotSLTPOrder(data) {
     }
     let order
     if (id) {
-        order = await orderModel.findByIdAndUpdate(id, params)
+        order = await orderWatcher.updateOrder(id, params)
     } else {
         order = await orderWatcher.creatOrder(params)
     }

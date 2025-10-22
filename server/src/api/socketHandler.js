@@ -35,10 +35,9 @@ export default function socketHandler(socket) {
     const subscribtionManager = new SubscribtionManager()
 
     socket.on('subscribeAccount', (data, cb) => {
-        if (subscribtionManager.get(data.exchange, 'unsubscribeAccount')) {
-            console.log(`Already subscribed to account updates for exchange: ${data.exchange}`)
-            // cb('no');
-            return
+        const unsubscribeAccount = subscribtionManager.get(data?.exchange, 'unsubscribeAccount')
+        if (unsubscribeAccount) {
+            unsubscribeAccount()
         }
         console.log(`Client subscribed to account updates for exchange: ${data.exchange}`)
         const exchangeMonitor = getExchangeMonitor(data.exchange)
@@ -60,7 +59,7 @@ export default function socketHandler(socket) {
         }
     })
     socket.on('subscribeTickers', (data) => {
-        let unsubscribeTickers = subscribtionManager.get(data.exchange, 'unsubscribeTickers')
+        const  unsubscribeTickers = subscribtionManager.get(data.exchange, 'unsubscribeTickers')
         if (unsubscribeTickers) {
             // console.log(`Already subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`);
             unsubscribeTickers()
@@ -69,7 +68,7 @@ export default function socketHandler(socket) {
         console.log(`Client subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`)
         const exchangeMonitor = getExchangeMonitor(data.exchange)
         if (exchangeMonitor) {
-            unsubscribeTickers = exchangeMonitor.onTickersUpdate(data.symbols, (tickers) => {
+            const unsubscribeTickers = exchangeMonitor.onTickersUpdate(data.symbols, (tickers) => {
                 // console.log('onTickersUpdate', data.symbols, tickers);
                 socket.emit('tickersUpdate', tickers)
             })

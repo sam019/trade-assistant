@@ -4,6 +4,7 @@ import _ from 'lodash-es'
 import orderWatcher from './orderMonitor'
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES } from '../../../share/const.js'
+import { sleep } from '../../../share/utils.js'
 
 const exchangeModels = {}
 
@@ -11,7 +12,7 @@ class ExchangeModel {
     constructor(exchange) {
         // console.log('process.env.NODE_ENV', process.env.NODE_ENV)
         this._test = process.env.TESTNET
-        this.fetchInterval = 500
+        this.fetchInterval = 1000
 
         if (this._test) {
             // console.log('new ExchangeModel', exchange)
@@ -45,8 +46,9 @@ class ExchangeModel {
             linear: [],
             inverse: [],
         }
+        this.tickers = {}
         // this.latestOriginTickers = [];
-        this.tickersNeedWatch = new Set()
+        this.symbolsNeedWatch = new Set()
         this.balance = {
             spot: {},
             linear: {},
@@ -56,9 +58,9 @@ class ExchangeModel {
         this.positionSymbols = []
         this.leverages = []
         this.orders = []
-        // this.tickersWatcherRunning = false;
         this.tickersCbSymbolMap = new Map() // 保存onTickersUpdate接收的订阅函数，key为回调函数，value为订阅的symbols
         this.awaitTickersUpdateCb = new Map() // 保存awaitTickersUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
+        this.awaitPositionsUpdateCb = new Map() // 保存awaitPositionsUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
         this.accountCbMap = new Set() // 保存onAccountUpdate接收的订阅函数，item为回调函数
         this.positionsCbMap = new Set() // 保存onPositionsUpdate接收的订阅函数，item为回调函数
         // this.awaitAccountUpdateCb = new Set(); // 保存awaitAccountUpdate方法调用产生的promise，item为promise的[resolve，reject]
@@ -81,7 +83,7 @@ class ExchangeModel {
             await this.exchange.loadMarkets()
         } catch (e) {
             console.log(e)
-            await new Promise((res) => setTimeout(res, 5000))
+            await sleep(5000)
             this.loadmarkets()
         }
         
@@ -142,6 +144,7 @@ class ExchangeModel {
             while (true) {
                 try {
                     // console.log('startWatchBalance', 'start')
+                    const sign = Date.now()
                     const balance = await this.exchange[method]({
                         type,
                         subType,
@@ -158,18 +161,16 @@ class ExchangeModel {
                             // console.log(`watch balance ${typeKey}`)
                             this._triggerAccountCbs('balance')
                         }
-                        await new Promise(r => setTimeout(r, this.fetchInterval))
+                        await sleep(this.fetchInterval, sign)
                     } else {
                         this.balance[typeKey] = balance
                         this._triggerAccountCbs('balance')
                     }
                     // console.log('startWatchBalance', this.balance.BTC)
-                    // await new Promise(r => setTimeout(r, 1000))
-                    // this._triggerAccountCbs();
                 } catch (e) {
                     // throw e;
                     console.error('startWatchBalance error', subType ? subType : type, e.message)
-                    await new Promise(r => setTimeout(r, 5000))
+                    await sleep(5000)
                 }
             }
         } else {
@@ -183,26 +184,38 @@ class ExchangeModel {
         if (this.exchange.has[method]) {
             while (true) {
                 try {
+                    const sign = Date.now()
                     this.positions = await this.watchPositions()
                     // console.log('startWatchPositions', this.positions)
-                    const positionSymbols = this.positions.map(pos => pos.symbol)
-                    if (_.xor(positionSymbols, this.positionSymbols).length) {
+                    const positionSymbols = this.positions.map(pos => pos.symbol).sort()
+                    if (!_.isEqual(positionSymbols, this.positionSymbols)) {
                         this.positionSymbols = positionSymbols
                         this.leverages = await this.fetchLeverages(positionSymbols)
                     }
                     this.positions.forEach(pos => {
                         pos.leverage = this.leverages[pos.symbol]
                     })
+                    this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
+                        const r = this.positions.filter(pos => symbols.includes(pos.symbol))
+                        // console.log('awaitPositionsUpdateCb', symbols, r)
+                        cb[0](r)
+                        this.awaitPositionsUpdateCb.delete(cb)
+                    })
                     this._triggerPositionsCbs()
                     this._triggerAccountCbs('positions')
                         
                     if (this._test) {
-                        await new Promise(r => setTimeout(r, this.fetchInterval))
+                        await sleep(this.fetchInterval, sign)
                     }
                 } catch (e) {
+                    this.awaitPositionsUpdateCb.entries().forEach(([cb]) => {
+                        console.log('awaitTickersUpdateCb error', cb[1])
+                        cb[1](e)
+                        this.awaitPositionsUpdateCb.delete(cb)
+                    })
                     // throw e;
                     console.log('startWatchPositions error', e.message)
-                    await new Promise(r => setTimeout(r, 5000))
+                    await sleep(5000)
                 }
             }
         } else {
@@ -249,7 +262,7 @@ class ExchangeModel {
 
     async startWatchOrders() {
         orderWatcher.onOrdersUpdate(({ ordersGroupByExchange }) => {
-            // console.log('ordersGroupByExchange[this.exchangeName]', ordersGroupByExchange, this.exchangeName);
+            console.log('WatchOrders', ordersGroupByExchange[this.exchangeName])
             this.orders = ordersGroupByExchange[this.exchangeName] || {}
             this._triggerAccountCbs('orders')
         })
@@ -268,7 +281,9 @@ class ExchangeModel {
     async startWatchTickers() {
         while (true) {
             try {
+                const sign = Date.now()
                 const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
+                this.tickers = tickers
                 // console.log('tickers', Object.keys(tickers))
                 console.log('tickers update', new Date().toLocaleTimeString(), this.exchange.id, Object.entries(tickers).map(([k, t]) => [k, t.last]).length)
                 // console.log(this.tickersCbSymbolMap)
@@ -288,7 +303,7 @@ class ExchangeModel {
                     }
                 })
                 if (this._test) {
-                    await new Promise(res => setTimeout(() => res(), this.fetchInterval))
+                    await sleep(this.fetchInterval, sign)
                 }
             } catch (e) {
                 this.awaitTickersUpdateCb.entries().forEach(([cb]) => {
@@ -306,14 +321,14 @@ class ExchangeModel {
                     console.log(this.exchange.id, 'watchTickers failed with:', e.message)
                     // retry or whatever
                 }
-                await new Promise(rej => setTimeout(rej, 5000))
+                await sleep(5000)
             }
         }
     }
     async watchTickers(symbols) {
         const method = this._test ? 'fetchTickers' : 'watchTickers'
         // console.log('check tickers for: ', symbols)
-        const tickersNeedWatch = {
+        const symbolsNeedWatch = {
             spot: new Set(),
             linear: new Set(),
             inverse: new Set(),
@@ -324,20 +339,22 @@ class ExchangeModel {
             (Array.isArray(cbSymbols) ? cbSymbols : [cbSymbols]).forEach((symbol) => {
                 const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
                 if (!match[3]) {
-                    tickersNeedWatch.spot.add(symbol)
+                    symbolsNeedWatch.spot.add(symbol)
                 } else if (match[3] === match[2]) {
-                    tickersNeedWatch.linear.add(symbol)
+                    symbolsNeedWatch.linear.add(symbol)
                 } else {
-                    tickersNeedWatch.inverse.add(symbol)
+                    symbolsNeedWatch.inverse.add(symbol)
                 }
             })
         })
-        const typedTickers = await Promise.all(Object.entries(tickersNeedWatch).map(async ([key, value]) => {
+        const sign = Date.now()
+        const typedTickers = await Promise.all(Object.entries(symbolsNeedWatch).map(async ([key, value]) => {
             const symbols = Array.from(value)
             // console.log('typedTickers', key, symbols)
 
             if (!symbols.length) {
-                return new Promise(res => setTimeout(() => res({}), this.fetchInterval))
+                await sleep(this.fetchInterval, sign)
+                return {}
             }
             return await this.exchange[method](symbols, {
                 type: key === 'spot' ? key : undefined,
@@ -349,9 +366,7 @@ class ExchangeModel {
         // const result = typedTickers.reduce((a, b) => Object.assign(a, b), {});
         return result
     }
-    // async watchTickers(symbols = []) {
-    //     this.tickersNeedWatch = symbols.reduce((a, b) => a.add(b), this.tickersNeedWatch);
-    // }
+
     onTickersUpdate(symbols = [], cb) {
         this.tickersCbSymbolMap.set(cb, Array.from(new Set(symbols)))
         return () => {
@@ -377,13 +392,39 @@ class ExchangeModel {
         }
     }
 
-    async awaitTickersUpdate(symbols = []) {
+    async awaitTickersUpdate(symbols = [], needRefresh = false) {
+        if (!needRefresh) {
+            const r = symbols.reduce((a, b) => this.tickers[b] ? a.concat(this.tickers[b]) : a, [])
+            // console.log('awaitTickersUpdate', symbols, r)
+            if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                return r
+            }
+        }
+        
         let res, rej
         const promise = new Promise((_res, _rej) => {
             res = _res
             rej = _rej
         })
         this.awaitTickersUpdateCb.set([res, rej], symbols)
+        return promise
+    }
+
+    async awaitPositionsUpdate(symbols = [], needRresh = false) {
+        if (!needRresh) {
+            const r = this.positions.filter(pos => symbols.includes(pos.symbol))
+            // console.log('awaitTickersUpdate', symbols, r)
+            if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                return r
+            }
+        }
+        
+        let res, rej
+        const promise = new Promise((_res, _rej) => {
+            res = _res
+            rej = _rej
+        })
+        this.awaitPositionsUpdateCb.set([res, rej], symbols)
         return promise
     }
 

@@ -461,23 +461,9 @@ export default {
         sellLabel() {
             return this.isSpotMarket ? '卖出' : '卖出/做空'
         },
-        // 当前unit可下单数量的最小粒度(严格判断在后端做)
-        // amountStep() {
-        //     const precision = this.market?.precision?.amount || 0;
-        //     if (this.isSpotMarket) {
-        //         // return this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE ? precision : (precision * this.ticker?.last);
-        //         return this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE ? precision : new Decimal(precision).mul(this.ticker.last || 0).toNumber();
-        //     }
-        //     if (this.isLinearPerpMarket) {
-        //         const contractAmountStep = this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE ? precision : new Decimal(precision).mul(this.ticker.last || 0).toNumber();
-        //         // return contractAmountStep * this.market?.contractSize;
-        //         return new Decimal(contractAmountStep).mul(this.market.contractSize).toNumber();
-        //     }
-        // },
         priceChanged() {
             if (!this.ticker.change) return ''
             const sign = this.ticker.change >= 0 ? '+' : ''
-            // return `${sign}${this.ticker.change.toLocaleString()}/${sign}${Math.round(this.ticker.percentage * 1000) / 1000}%`;
             return `${sign}${this.ticker.change.toLocaleString()}/${sign}${new Decimal(this.ticker.percentage).toDecimalPlaces(2).toNumber()}%`
         },
         isSpotMarket() {
@@ -563,6 +549,7 @@ export default {
                 symbols.push(`${balance.currency}/${STABLE_COINS.USDT}`)
             })
             this.market?.symbol && symbols.push(this.market.symbol)
+            symbols.sort() // 排序方便比较
             return symbols
         },
         // 可买总数量是否为估算(取决于盘口价格和深度)
@@ -592,7 +579,6 @@ export default {
         },
         avaiableOrderAmount() {
             const balance = _.get(this.exchangeAccount, ['balance', this.marketType]) || {}
-            // const currencyName = this.market[this.orderAmountUnit];
             if (this.isSpotMarket) {
                 // 现货
                 if (this.orderSide === ORDER_SIDES.BUY) {
@@ -621,12 +607,8 @@ export default {
                 if (!this.reduceOnly) {
                     // 建仓
                     if (this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE) {
-                        // return Math.floor((balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0) / this.contractQuoteAmountStep) * this.minAmountOnBase;
-                        // return new Decimal(balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0).div(this.contractQuoteAmountStep).floor().mul(this.minAmountOnBase).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber();
                         return new Decimal(balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0).div(this.ticker.last || 0).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber()
                     } else {
-                        // return Math.floor((balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0) / this.contractQuoteAmountStep) * this.contractQuoteAmountStep;
-                        // return new Decimal(balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0).div(this.contractQuoteAmountStep).floor().mul(this.contractQuoteAmountStep).toNumber();
                         return balance[this.market[ORDER_AMOUNT_TYPES.QUOTE]]?.free || 0
                     }
                 } else {
@@ -681,27 +663,35 @@ export default {
             }
             if (this.isAvaiableOrderAmountEstimated) {
                 // const precision = _.get(this.market, ['precision', this.orderAmountUnit], 1);
-                // result = Math.floor(this.avaiableOrderAmount * 100) / 100;
                 result = new Decimal(this.avaiableOrderAmount || 0).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber()
             } else {
                 result = this.avaiableOrderAmount
             }
             return Number.isNaN(result) ? NaN : (result + ' ' + this.market[this.orderAmountUnit])
         },
-        // minAmountOnBase() {
-        //     return this.market?.limits?.amount?.min || 1;
-        // },
-        // contractQuoteAmountStep() {
-        //     // return this.ticker.last * this.market.contractSize * this.minAmountOnBase;
-        //     return new Decimal(this.ticker.last || 0).mul(this.market.contractSize).mul(this.market.precision.amount).toNumber();
-        // },
         // orderUsePct为true时，使用的另一资产的绝对值
         realCurrencyAmount() {
             if (!this.orderUsePct) return null
             const realUnit = this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE ? ORDER_AMOUNT_TYPES.QUOTE : ORDER_AMOUNT_TYPES.BASE
             const realCurrency = this.market[realUnit]
+            let balance
+            if (this.isSpotMarket) {
+                balance = this.exchangeAccount.balance.spot[realCurrency]?.free || 0
+            } else if (this.isLinearPerpMarket) {
+                if (this.reduceOnly) {
+                    balance = new Decimal(this.curPosition.contracts).mul(this.curPosition.contractSize).toNumber()
+                } else {
+                    balance = this.exchangeAccount.balance.linear[realCurrency]?.free || 0
+                }
+            } else {
+                if (this.reduceOnly) {
+                    balance = new Decimal(this.curPosition.contracts).mul(this.curPosition.contractSize).div(this.curPosition.markPrice).toNumber()
+                } else {
+                    balance = this.exchangeAccount.balance.inverse[realCurrency]?.free || 0
+                }
+            }
             // console.log('recu', realUnit, realCurrency, this.orderAmountPct, this.exchangeAccount.balance[this.marketType][realCurrency].free, )
-            return '=' + new Decimal(this.orderAmountPct).div(100).mul(this.exchangeAccount.balance[this.marketType][realCurrency]?.free || 0).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber() + realCurrency
+            return '=' + new Decimal(this.orderAmountPct).div(100).mul(balance).toDecimalPlaces(this.getPrecisionByUnit(realUnit)).toNumber() + realCurrency
         },
         isFormValid() {
             return this.validateForm()
@@ -770,7 +760,7 @@ export default {
     watch: {
         symbolsNeedTicker(newVal, oldVal) {
             // console.log('symbolsNeedTicker', newVal, oldVal)
-            if (!_.xor(newVal, oldVal).length) return
+            if (_.isEqual(newVal, oldVal)) return
             socket.subscribeTickers(this.exchange, this.symbolsNeedTicker, (tickers) => {
                 // console.log('tickersUpdate', this.symbolsNeedTicker, this.market.symbol, tickers);
                 this.tickers = tickers

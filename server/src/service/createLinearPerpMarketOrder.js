@@ -1,13 +1,46 @@
 import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
-import { getPrecisionLength } from '../../../share/utils.js'
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES, TWAP_INTERVAL } from '../../../share/const.js'
+import { getPrecisionLength, sleep } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
+
+export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market }) {
+    const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
+    const quantityStep = Math.max(new Decimal(params.quantity).div(stepNum).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber(), market.precision.amount)
+
+    let remainQuantity = params.quantity, sltpOrder
+
+    while (remainQuantity > 0) {
+        const stepParmas = {
+            reduceOnly,
+            quantity: remainQuantity < new Decimal(quantityStep).mul(2).toNumber() ? remainQuantity : quantityStep,
+        }
+        try {
+            console.log(`创建市价单(TWAP): ${exchange} ${symbol} quantity:${stepParmas.quantity}`)
+            const sign = Date.now()
+            const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, stepParmas)
+            // todo 向前端推送twap进度
+            remainQuantity -= result.filled
+            await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+            if (withSLTP) {
+                if (!sltpOrder) {
+                    sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT })
+                } else {
+                    sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: sltpOrder.amount + result.filled })
+                }
+            }
+            await sleep(TWAP_INTERVAL, sign)
+        } catch (e) {
+            console.log(e)
+            throw e
+        }
+    }
+}
 
 // 创建U本位合约市价单
 export default async function createLinearPerpMarketOrder(data) {
-    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false } = data
+    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, withTWAP, totalMinute } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
     // 如果当前有仓位并且仓位方向和下单放下相反，判断为减仓单
@@ -78,7 +111,9 @@ export default async function createLinearPerpMarketOrder(data) {
     
     
     const precisionLength = getPrecisionLength(market.precision.amount)
-    const params = {}
+    const params = {
+        reduceOnly,
+    }
 
     if (unit === ORDER_AMOUNT_TYPES.CONTRACT) {
         // 按张下单，目前只有止盈止损单会触发
@@ -129,10 +164,18 @@ export default async function createLinearPerpMarketOrder(data) {
         }
     }
     // console.log('createLinearPerpMarketOrder quantity', params.quantity, precisionLength); 
+    if (withTWAP) {
+        if (totalMinute < 1) {
+            throw new Error('TWAP总时间不能少于1分钟')
+        }
+        createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
+        return
+    }
 
     console.log('创建市价单', exchange, symbol, params.quantity, realLeverage)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
     console.log('下单成功', result.amount, result.cost, result.leverage)
+    await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT
