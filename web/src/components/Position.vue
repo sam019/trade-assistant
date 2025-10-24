@@ -136,7 +136,7 @@ export default {
 
 .row {
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: space-between;
     margin: 5px 0;
     gap: 5px;

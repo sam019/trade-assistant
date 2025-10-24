@@ -115,11 +115,13 @@ export class OrderWatcher {
     }
 
     async resolveOrder(_id) {
-        return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.RESOLVED })
+        // return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.RESOLVED })
+        return await orderModel.findByIdAndDelete(_id)
     }
 
     async closeOrder(_id) {
-        return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.CLOSED })
+        // return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.CLOSED })
+        return await orderModel.findByIdAndDelete(_id)
     }
 }
 const orderWatcher = new OrderWatcher()

@@ -14,5 +14,6 @@ export function checkSymbol(symbol) {
 }
 
 export async function sleep(time = 0, signTime = 0) {
-    return new Promise(res => setTimeout(() => res(), signTime ? time - signTime : time))
+    // console.log('sleep', signTime ? time - (Date.now() - signTime) : time)
+    return new Promise(res => setTimeout(() => res(), signTime ? time - (Date.now() - signTime) : time))
 }

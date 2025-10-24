@@ -51,7 +51,7 @@ export default async function checkSpotSLTPOrder(order, ticker) {
             orderWatcher.markOrderDealing(_id)
             
             const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
-
+            const options = { skipSLTPOrderSave: true }
             const result = await service.createSpotMarketOrder({
                 exchange,
                 symbol,
@@ -61,7 +61,7 @@ export default async function checkSpotSLTPOrder(order, ticker) {
                 withSLTP,
                 slPrice,
                 tpPrice,
-            })
+            }, options)
             console.log(`条件委托订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 买入数量:${result.filled}${cSymbol.base}`)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)

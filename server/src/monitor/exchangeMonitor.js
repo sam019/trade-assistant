@@ -4,6 +4,7 @@ import _ from 'lodash-es'
 import orderWatcher from './orderMonitor'
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 import { sleep } from '../../../share/utils.js'
 
 const exchangeModels = {}
@@ -71,10 +72,14 @@ class ExchangeModel {
         // console.log('exhcange options', this.exchange.options)
         // this.exchange.verbose = true; // for debug purpose set it to true
         // this.exchange.fetchAccounts().then(r => console.log(r))
+        // console.log(1)
+        this.startWatchOrders()
+        // console.log(2)
         this.startWatchBalance()
         // console.log(this.exchange.markets)
+        // console.log(3)
         this.startWatchPositions()
-        this.startWatchOrders()
+        // console.log(4)
         this.startWatchTickers()
         return this
     }
@@ -130,112 +135,122 @@ class ExchangeModel {
     }
 
     async startWatchBalance() {
-        this.watchBalance('spot')
-        this.watchBalance('future', 'linear')
-        this.watchBalance('future', 'inverse')
-        // this.watchBalance('inverse');
-    }
-
-    async watchBalance(type = 'spot', subType = undefined) {
-        const method = this._test ? 'fetchBalance' : 'startWatchBalance'
-        // const method = 'startWatchBalance';
-        // const method = 'watchAccount';
-        if (this.exchange.has[method]) {
-            while (true) {
-                try {
-                    // console.log('startWatchBalance', 'start')
-                    const sign = Date.now()
-                    const balance = await this.exchange[method]({
-                        type,
-                        subType,
-                    })
-                    delete balance.timestamp
-                    delete balance.datetime
-                    delete balance.info
-                    const typeKey = subType ? subType : type
-                    if (this._test) {
-                        const isChanged = !_.isEqual(this.balance[typeKey], balance) // isChange一定会变，因为时间戳不一样
-                        // console.log('isChanged', isChanged, Object.keys((this.balance || {})[subType ? subType : type] || {}), Object.keys(balance))
-                        if (isChanged) {
-                            this.balance[typeKey] = balance
-                            // console.log(`watch balance ${typeKey}`)
-                            this._triggerAccountCbs('balance')
-                        }
-                        await sleep(this.fetchInterval, sign)
-                    } else {
-                        this.balance[typeKey] = balance
-                        this._triggerAccountCbs('balance')
-                    }
-                    // console.log('startWatchBalance', this.balance.BTC)
-                } catch (e) {
-                    // throw e;
-                    console.error('startWatchBalance error', subType ? subType : type, e.message)
-                    await sleep(5000)
+        // this.watchBalance('spot')
+        // this.watchBalance('future')
+        // this.watchBalance('future', 'linear')
+        // this.watchBalance('future', 'inverse')
+        while (true) {
+            try {
+                const sign = Date.now()
+                const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
+                const balance = {}
+                Object.values(result).forEach((item, index) => {
+                    const type = index === 0 ? 'spot' : index === 1 ? 'linear' : 'inverse'
+                    balance[type] = item
+                })
+                if (!_.isEqual(balance, this.balance)) {
+                    this.balance = balance
+                    this._triggerAccountCbs('balance')
                 }
+                await sleep(this.fetchInterval, sign)
+            } catch (e) {
+                console.error('startWatchBalance error', e.message)
+                await sleep(5000)
             }
-        } else {
-            console.log('exchange not support startWatchBalance', this.exchange.id)
         }
     }
 
-    async startWatchPositions() {
-        const method = this._test ? 'fetchPositions' : 'startWatchPositions'
+    async watchBalance(type = 'spot', subType = undefined) {
+        // const method = this._test ? 'fetchBalance' : 'startWatchBalance'
+        // const method = 'watchBalance'
+        // const method = 'fetchBalanceWs'
+        const method = 'fetchBalance'
+        // console.log('watchBalance', 'start')
+        // const sign = Date.now()
+        const balance = await this.exchange[method]({
+            type,
+            subType,
+        })
+        // console.log('watchBalance', balance)
+        delete balance.timestamp
+        delete balance.datetime
+        delete balance.info
+        return balance
+    }
 
-        if (this.exchange.has[method]) {
-            while (true) {
-                try {
-                    const sign = Date.now()
-                    this.positions = await this.watchPositions()
-                    // console.log('startWatchPositions', this.positions)
-                    const positionSymbols = this.positions.map(pos => pos.symbol).sort()
-                    if (!_.isEqual(positionSymbols, this.positionSymbols)) {
-                        this.positionSymbols = positionSymbols
-                        this.leverages = await this.fetchLeverages(positionSymbols)
-                    }
-                    this.positions.forEach(pos => {
-                        pos.leverage = this.leverages[pos.symbol]
-                    })
-                    this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
-                        const r = this.positions.filter(pos => symbols.includes(pos.symbol))
-                        // console.log('awaitPositionsUpdateCb', symbols, r)
-                        cb[0](r)
-                        this.awaitPositionsUpdateCb.delete(cb)
-                    })
-                    this._triggerPositionsCbs()
-                    this._triggerAccountCbs('positions')
-                        
-                    if (this._test) {
-                        await sleep(this.fetchInterval, sign)
-                    }
-                } catch (e) {
-                    this.awaitPositionsUpdateCb.entries().forEach(([cb]) => {
-                        console.log('awaitTickersUpdateCb error', cb[1])
-                        cb[1](e)
-                        this.awaitPositionsUpdateCb.delete(cb)
-                    })
-                    // throw e;
-                    console.log('startWatchPositions error', e.message)
-                    await sleep(5000)
+    async startWatchPositions() {
+        while (true) {
+            try {
+                const sign = Date.now()
+                this.positions = await this.watchPositions()
+                const positionSymbols = this.positions.map(pos => pos.symbol).sort()
+                if (!_.isEqual(positionSymbols, this.positionSymbols)) {
+                    this.positionSymbols = positionSymbols
+                    this.leverages = await this.fetchLeverages(positionSymbols)
                 }
+                this.positions.forEach(pos => {
+                    pos.leverage = this.leverages[pos.symbol]
+                })
+                // console.log('startWatchPositions', this.positions)
+                this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
+                    const r = this.positions.filter(pos => symbols.includes(pos.symbol))
+                    // console.log('awaitPositionsUpdateCb', symbols, r)
+                    cb[0](r)
+                    this.awaitPositionsUpdateCb.delete(cb)
+                })
+                this._triggerPositionsCbs()
+                this._triggerAccountCbs('positions')
+                // console.log('watch pos sleep', sign)
+                await sleep(this.fetchInterval, sign)
+                // if (this._test) {
+                //     await sleep(this.fetchInterval, sign)
+                // }
+            } catch (e) {
+                this.awaitPositionsUpdateCb.entries().forEach(([cb]) => {
+                    console.log('awaitTickersUpdateCb error', cb[1])
+                    cb[1](e)
+                    this.awaitPositionsUpdateCb.delete(cb)
+                })
+                // throw e;
+                console.log('startWatchPositions error', e.message)
+                await sleep(5000)
             }
-        } else {
-            console.log('exchange not support startWatchPositions', this.exchange.id)
         }
     }
 
     async watchPositions(symbols = []) {
-        const method = this._test ? 'fetchPositions' : 'watchPositions'
+        // const method = this._test ? 'fetchPositions' : 'watchPositions'
+        const method = 'fetchPositions'
         const linearSymbols = []
         const inverseSymbols = []
         new Set(symbols).forEach(symbol => {
-            const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
-            if (match[3] === match[2]) {
+            const cSymbol = checkSymbol(symbol)
+            if (cSymbol.isLinear) {
                 linearSymbols.push(symbol)
-            } else if (match[3] === match[1]) {
+            } {
                 inverseSymbols.push(symbol)
             }
         })
-        const result = await Promise.all([linearSymbols, inverseSymbols].map((symbols, index) => this.exchange[method](!linearSymbols.length && !inverseSymbols.length ? undefined : symbols, { subType: index ? MARKET_TYPES.INVERSE : MARKET_TYPES.LINEAR })))
+        // return this.exchange[method]()
+        let requests = []
+        if (!symbols.length) {
+            requests = [
+                this.exchange[method](undefined, { subType: MARKET_TYPES.LINEAR }), // 传undefined查所有U本位仓位
+                this.exchange[method](undefined, { subType: MARKET_TYPES.INVERSE }), // 传undefined查所有币本位仓位
+            ]
+        } else {
+            if (linearSymbols.length) {
+                requests.push(
+                    this.exchange[method](linearSymbols, { subType: MARKET_TYPES.LINEAR }),
+                )
+            }
+            if (inverseSymbols.length) {
+                requests.push(
+                    this.exchange[method](inverseSymbols, { subType: MARKET_TYPES.INVERSE }),
+                )
+            }
+        }
+        const result = await Promise.all(requests)
         // console.log('fetchPositions', result)
         return [...result[0], ...result[1]]
     }
@@ -244,10 +259,10 @@ class ExchangeModel {
         const linearSymbols = []
         const inverseSymbols = []
         new Set(symbols).forEach(symbol => {
-            const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
-            if (match[3] === match[2]) {
+            const cSymbol = checkSymbol(symbol)
+            if (cSymbol.isLinear) {
                 linearSymbols.push(symbol)
-            } else if (match[3] === match[1]) {
+            } else {
                 inverseSymbols.push(symbol)
             }
         })
@@ -302,9 +317,7 @@ class ExchangeModel {
                         this.awaitTickersUpdateCb.delete(cb)
                     }
                 })
-                if (this._test) {
-                    await sleep(this.fetchInterval, sign)
-                }
+                await sleep(this.fetchInterval, sign)
             } catch (e) {
                 this.awaitTickersUpdateCb.entries().forEach(([cb]) => {
                     console.log('awaitTickersUpdateCb error', cb[1])
@@ -326,7 +339,8 @@ class ExchangeModel {
         }
     }
     async watchTickers(symbols) {
-        const method = this._test ? 'fetchTickers' : 'watchTickers'
+        // const method = this._test ? 'fetchTickers' : 'watchTickers'
+        const method = 'fetchTickers'
         // console.log('check tickers for: ', symbols)
         const symbolsNeedWatch = {
             spot: new Set(),
@@ -434,7 +448,8 @@ class ExchangeModel {
 function getExchangeMonitor(exchange) {
     if (!exchangeModels[exchange]) {
         if (!SUPPORTED_EXCHANGES.includes(exchange)) {
-            throw new Error(`Exchange ${exchange} not supported yet!!!`)
+            console.error(`Exchange ${exchange} not supported yet!!!`)
+            return
         }
         exchangeModels[exchange] = new ExchangeModel(exchange)
         // console.log(exchangeModels[exchange].exchange.has['fetchPositions'])

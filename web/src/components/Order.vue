@@ -102,6 +102,7 @@ export default {
                     <div class="tags">
                         <el-tag :type="tagType" size="small">{{ orderTypeLabel }}</el-tag>
                         <el-tag :type="tagType" size="small">{{ orderSideLabel }}</el-tag>
+                        <span v-if="order.leverage">{{ order.leverage }}x</span>
                     </div>
                 </template>
                 <template v-else-if="position">
@@ -110,6 +111,7 @@ export default {
                     <div class="tags">
                         <el-tag :type="tagType" size="small">{{ orderTypeLabel }}</el-tag>
                         <el-tag :type="tagType" size="small">{{ orderSideLabel }}</el-tag>
+                        <span v-if="order.leverage">{{ order.leverage }}x</span>
                     </div>
                 </template>
                 <div v-else style="padding: 5px 0;">
@@ -178,7 +180,7 @@ export default {
 .row1 {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
     gap: 5px;
 }
 
@@ -203,5 +205,10 @@ export default {
 .value {
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.tags {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px
 }
 </style>

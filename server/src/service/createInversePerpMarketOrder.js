@@ -6,7 +6,7 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import { createTWAPOrder } from './createLinearPerpMarketOrder.js'
 
-export default async function createInversePerpMarketOrder(data) {
+export default async function createInversePerpMarketOrder(data, options = {}) {
     const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, withTWAP, totalMinute } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
@@ -35,6 +35,7 @@ export default async function createInversePerpMarketOrder(data) {
         type: ORDER_TYPES.SLTP,
         slPrice,
         tpPrice,
+        leverage,
     }
     if (withSLTP) {
         if (!slPrice && !tpPrice) {
@@ -133,12 +134,15 @@ export default async function createInversePerpMarketOrder(data) {
     }
     console.log('创建市价单', exchange, symbol, params.quantity, realLeverage)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    console.log('下单成功', result.amount, result.cost, result.leverage)
+    console.log('下单成功', result.amount, result.cost, leverage)
     await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT
-        await orderWatcher.creatOrder(sltpParams)
+        const order = orderWatcher.creatOrder(sltpParams)
+        if (!options.skipSLTPOrderSave) {
+            await order
+        }
     }
     return result
 }

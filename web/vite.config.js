@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
+// import basicSsl from '@vitejs/plugin-basic-ssl'
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import fs from 'fs'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -14,8 +16,13 @@ export default defineConfig({
         Components({
             resolvers: [ElementPlusResolver()],
         }),
+        // basicSsl(),
     ],
     server: {
-        host: "0.0.0.0",
+        host: '0.0.0.0',
+        https: {
+            key: fs.readFileSync('../localhost+3-key.pem'),
+            cert: fs.readFileSync('../localhost+3.pem'),
+        },
     },
 })

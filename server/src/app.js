@@ -2,6 +2,8 @@ import { serve } from "@hono/node-server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
 import { Server } from "socket.io"
+import fs from 'fs'
+import { createServer } from 'node:https'
 
 import connectDB from "./database/db.js"
 import monitor from "./monitor/monitor.js"
@@ -10,18 +12,30 @@ import orderRoute from "./api/order.js"
 import marketRoute from "./api/market.js"
 import exchangeRoute from "./api/exchange.js"
 import positionRoute from "./api/position.js"
+import transferRoute from "./api/transfer.js"
+import { authRouter, ioAuth, httpAuth } from "./auth/auth.js"
 
 import socketHandler from "./api/socketHandler.js"
 
 
 global.isDev = process.env.NODE_ENV !== 'production'
+const corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
 
 async function init() {
     await connectDB()
     monitor.start()
     const app = new Hono()
 
-    app.use('*', cors())
+    app.use('*', cors({
+        origin(domain) {
+            // console.log('domain', domain)
+            if (corsOrigin.includes(domain)) {
+                return domain
+            }
+            return ''
+        },
+        credentials: true,
+    })).use('*', httpAuth)
         .get("/", (c) => {
             return c.text("Hello Hono!")
         })
@@ -29,28 +43,35 @@ async function init() {
         .route("/order", orderRoute)
         .route("/market", marketRoute)
         .route("/position", positionRoute)
+        .route("/transfer", transferRoute)
+        .route("/auth", authRouter)
 
     // app.onError((err, c) => {
     //     console.error(err.message);
     //     return c.json(err.message, 500);
     // })
-
     const server = serve(
         {
             fetch: app.fetch,
+            createServer: createServer,
             port: 3000,
+            serverOptions: {
+                key: fs.readFileSync('../localhost+3-key.pem'),
+                cert: fs.readFileSync('../localhost+3.pem'),
+            },
         },
         (info) => {
-            console.log(`Server is running on http://localhost:${info.port}`)
+            console.log(`Server is running on https://localhosts:${info.port}`)
         },
     )
-
+    // console.log('corsOrigin', corsOrigin)
     const io = new Server(server, {
         cors: {
-            origin: "*",
-            methods: ["GET", "POST"],
+            origin: corsOrigin,
+            credentials: true,
         },
     })
+    io.use(ioAuth)
     io.on("connection", socketHandler)
 }
 

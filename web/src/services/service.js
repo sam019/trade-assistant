@@ -1,9 +1,21 @@
 import axios from 'axios'
 import { apiURL } from '../config'
+import socket from './socket'
 
 const service = axios.create({
     baseURL: apiURL,
+    withCredentials: true,
     // timeout: 1000,
+})
+
+service.interceptors.request.use(function (config) {
+    // Do something before request is sent
+    // config.data = Object.assign(config.data || {}, { socketId: socket?.socket.id })
+    // console.log('interceptors request', config.data, socket.socket)
+    return config
+}, function (error) {
+    // Do something with request error
+    return Promise.reject(error)
 })
 
 export async function getSupportedExchanges() {
@@ -62,6 +74,11 @@ export async function setMarginMode(exchange, symbol, mode) {
 
 export async function closePosition(exchange, symbol) {
     const response = await service.post('/position/close', { exchange, symbol })
+    return response.data
+}
+
+export async function login(pwd) {
+    const response = await service.post('/auth', { pwd })
     return response.data
 }
 

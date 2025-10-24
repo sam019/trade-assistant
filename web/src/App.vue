@@ -1,5 +1,6 @@
 <script>
 // import { ElMessage } from '@hc/element-plus'
+import CryptoJS from 'crypto-js';
 import { computed } from 'vue'
 import _ from 'lodash'
 import { ElLoading } from 'element-plus'
@@ -12,6 +13,7 @@ import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
 import Position from './components/Position.vue'
 import Order from './components/Order.vue'
+import Login from './components/Login.vue'
 
 import * as service from './services/service'
 import socket from './services/socket'
@@ -28,9 +30,11 @@ export default {
         Balance,
         Position,
         Order,
+        Login,
     },
     data() {
         return {
+            showLogin: false,
             exchanges: [], // 支持的交易所列表
             exchange: '',  // 当前选择的交易所
             exchangeAccount: {}, // 当前交易所账户信息
@@ -63,14 +67,41 @@ export default {
         }
     },
     methods: {
-        async initExchanges() {
-            const supportedExhcanges = await service.getSupportedExchanges()
-            this.exchanges = supportedExhcanges
-            // console.log(this.$router)
-            if (this.$router?.query.exchange && supportedExhcanges.includes(this.$route.query.exchange)) {
-                this.initExchangeData(this.$route.query.exchange)
-            } else {
-                this.initExchangeData(supportedExhcanges[0])
+        async init() {
+            try {
+                // this.showLogin = true
+                await socket.connect()
+                // socket.connect()
+                const supportedExhcanges = await service.getSupportedExchanges()
+                this.exchanges = supportedExhcanges
+                // console.log(this.$router)
+                if (this.$router?.query.exchange && supportedExhcanges.includes(this.$route.query.exchange)) {
+                    this.initExchangeData(this.$route.query.exchange)
+                } else {
+                    this.initExchangeData(supportedExhcanges[0])
+                }
+                this.showLogin = false
+            } catch (e) {
+                if (window.isDev) {
+                    this.$message.error(e.message)
+                }
+                this.showLogin = true
+            }
+        },
+        async handleLogin(pwd) {
+            try {
+                await service.login(CryptoJS.SHA256(pwd).toString(CryptoJS.enc.Hex))
+                // console.log('login success')
+                this.showLogin = false
+                this.init()
+            } catch (e) {
+                if (window.isDev) {
+                    console.log(e)
+                    this.$message.error({
+                        message: JSON.stringify(e),
+                        duration: 0
+                    })
+                }
             }
         },
         async initExchangeData(exchange) {
@@ -257,6 +288,7 @@ export default {
                     tpPrice: this.tpPrice,
                     slPrice: this.slPrice,
                     triggerPrice: this.triggerPrice,
+                    leverage: this.leverage,
                     id: this.orderId,
                     // __force: true,
                 })
@@ -347,7 +379,6 @@ export default {
             } finally {
                 loading.close()
             }
-            
         },
         backTop() {
             window.scrollTo(0, 0)
@@ -374,7 +405,7 @@ export default {
             this.tpPrice = order.tpPrice
             this.orderWithSLTP = order.withSLTP
             this.triggerPrice = order.triggerPrice
-            
+
             if (this.isSpotMarket) {
                 this.orderAmountUnit = order.unit
                 this.handleAmountChange(order.amount)
@@ -453,7 +484,7 @@ export default {
             return this.tickers[this.market.symbol] || {}
         },
         lastPrice() {
-            return typeof this.ticker?.close === 'number' ? this.ticker.close.toLocaleString() : '-'
+            return typeof this.ticker?.close === 'number' ? new Decimal(this.ticker.close).toLocaleString() : '-'
         },
         buyLabel() {
             return this.isSpotMarket ? '买入' : '买入/做多'
@@ -768,7 +799,7 @@ export default {
         },
     },
     mounted() {
-        this.initExchanges()
+        this.init()
     },
 }
 </script>
@@ -776,165 +807,176 @@ export default {
 <template>
     <MarketSelectPanel :visible="dialogVisible" @close="closeDialog" @search="searchMarkets"
         @favorite="toggleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
-    <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px;">
-        <!-- 选择交易所 -->
-        <el-col style="flex-basis: 200px">
-            <el-select v-model="exchange">
-                <el-option v-for="item in exchanges" :key="item" :label="item" :value="item"></el-option>
-            </el-select>
-        </el-col>
-    </el-row>
-    <el-row align="middle" justify="space-between"
-        style="height: 60px; border-bottom: 2px solid gray; position: sticky; top: 0; z-index: 999; background: black !important;"
-        @click="backTop">
-        <!-- 选择交易对，并显示最新收盘价 -->
-        <el-col style="flex-basis: 50%;">
-            <el-button text @click="dialogVisible = true">{{ curSymbol }}<el-icon style="margin-left: 10px;">
-                    <ArrowDownBold />
-                </el-icon></el-button>
-        </el-col>
-        <el-col style="flex-basis: 50%;">
-            <div>{{ lastPrice }}</div>
-            <div v-show="priceChanged" :style="{ color: ticker.change >= 0 ? 'green' : 'red' }">{{ priceChanged }}</div>
-        </el-col>
-    </el-row>
-    <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
-        <!-- 选择订单类型，市价/止盈止损等 -->
-        <el-col style="flex-basis: 100px;">
-            <el-select :model-value="orderType" placeholder="Select" style="width: 100px;"
-                @change="handleOrderTypeChange">
-                <el-option v-for="item in ORDER_TYPES" :key="item" :label="orderTypesLabel[item]"
-                    :value="item"></el-option>
-            </el-select>
-        </el-col>
-        <!-- 合约仓位类型，只支持逐仓 -->
-        <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
-            <el-select :model-value="marginMode" @change="handleMarginModeChange">
-                <el-option v-for="item in MARGIN_MODES" :key="item" :label="item === MARGIN_MODES.CROSS ? '全仓' : '逐仓'"
-                    :value="item" :disabled="item === MARGIN_MODES.CROSS"></el-option>
-            </el-select>
-        </el-col>
-        <!-- 合约杠杆倍数 -->
-        <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
-            <el-select :model-value="leverage" @change="handleLeverageChange" :disabled="this.canChangeLeverage">
-                <el-option v-for="item in [1, 2, 3, 4, 5]" :key="item" :label="item+'x'" :value="item"></el-option>
-            </el-select>
-        </el-col>
-    </el-row>
-    <!-- 买单或卖单 -->
-    <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
-        <el-col style="flex-basis: 50%">
-            <el-button :type="orderSide === ORDER_SIDES.BUY ? 'success' : ''"
-                :disabled="isSideDisabled(ORDER_SIDES.BUY)" style="width: 100%; outline: none;"
-                @click="handleSideChange(ORDER_SIDES.BUY)">{{ buyLabel
-                }}</el-button>
-        </el-col>
-        <el-col style="flex-basis: 50%;">
-            <el-button :type="orderSide === ORDER_SIDES.SELL ? 'danger' : ''" style="width: 100%; outline: none;"
-                :disabled="isSideDisabled(ORDER_SIDES.SELL)" @click="handleSideChange(ORDER_SIDES.SELL)">{{ sellLabel
-                }}</el-button>
-        </el-col>
-    </el-row>
-    <!-- 可用余额 -->
-    <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px;">
-        <el-col style="flex-basis: auto; height: 100%;">可用</el-col>
-        <el-col style="flex-basis: auto; height: 100%;">
-            <template v-if="!Number.isNaN(displayAvaiableOrderAmount)">
-                {{ displayAvaiableOrderAmount }}{{
-                isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
-            </template>
-        </el-col>
-    </el-row>
-    <!-- 条件委托触发价格 -->
-    <div v-show="orderType === ORDER_TYPES.CONDITION" style="display: flex; flex-direction: column; padding: 0 10px;">
-        <el-input v-model="triggerPrice" type="number" clearable :controls="false" :min="0"
-            :placeholder="`触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
-    </div>
-    <!-- 止盈止损触发价格 -->
-    <div v-show="orderType === ORDER_TYPES.SLTP" style="display: flex; flex-direction: column; padding: 0 10px;">
-        <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
-            :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
-        <el-input v-model="slPrice" type="number" clearable :controls="false" :min="0"
-            :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`"
-            style="width: 100%; margin-top: 5px;"></el-input>
-    </div>
-    <!-- 下单仓位数量 -->
-    <div style="position: relative; padding: 10px 10px;">
-        <el-input type="number" clearable v-model="orderAmount" @change="handleAmountChange"
-            @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : '数量(保证金)'"
-            :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
-            <template #prefix>
-                <span v-show="orderUsePct">预估</span>
-            </template>
-            <template #append>
-                <el-select style="width: 100px;" :model-value="orderAmountUnit" :disabled="false"
-                    @change="handleAmountUnitChange">
-                    <el-option :label="market[ORDER_AMOUNT_TYPES.BASE]" :value="ORDER_AMOUNT_TYPES.BASE"></el-option>
-                    <el-option :label="market[ORDER_AMOUNT_TYPES.QUOTE]" :value="ORDER_AMOUNT_TYPES.QUOTE"></el-option>
+    <Login v-if="showLogin" @submit="handleLogin"></Login>
+    <div v-else>
+        <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px;">
+            <!-- 选择交易所 -->
+            <el-col style="flex-basis: 200px">
+                <el-select v-model="exchange">
+                    <el-option v-for="item in exchanges" :key="item" :label="item" :value="item"></el-option>
                 </el-select>
-            </template>
-        </el-input>
-        <!-- 可下单总数为预估且百分比下单时使用的真实资产数量 -->
-        <span v-show="orderUsePct"
-            style="position: absolute; top: 45px; color: white; font-size: 12px; left: 45%; transform: translateX(-50%);">{{
-            realCurrencyAmount }}</span>
-    </div>
-    <!-- 下单仓位数量百分比 -->
-    <div style="padding: 10px 10px 10px 20px;">
-        <el-slider v-model="orderAmountPct" @change="handleAmountPctChange"
-            :marks="{ 0: '0', 25: '25', 50: '50', 75: '75', 100: '100' }" show-input size="small"
-            :show-tooltip="true" />
-    </div>
-    <!-- 下单是否附带止盈止损 -->
-    <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 10px 10px 0 10px;">
-        <el-checkbox v-model="orderWithSLTP" label="止盈止损" />
-    </div>
-    <!-- 合约只减仓 -->
-    <div v-show="reduceOnly" style="display: flex; align-items: center; padding: 10px 10px 0 10px;">
-        <el-checkbox :model-value="true" label="只减仓" disabled />
-    </div>
-    <!-- 下单附带止盈止损设置 -->
-    <div v-show="orderWithSLTP" style="padding: 0 10px;">
-        <div style="display: flex; align-items: center; margin-bottom: 5px;">
+            </el-col>
+        </el-row>
+        <el-row align="middle" justify="space-between"
+            style="height: 60px; border-bottom: 2px solid gray; position: sticky; top: 0; z-index: 99; background: black !important;"
+            @click="backTop">
+            <!-- 选择交易对，并显示最新收盘价 -->
+            <el-col style="flex-basis: 50%;">
+                <el-button text @click="dialogVisible = true">{{ curSymbol }}<el-icon style="margin-left: 10px;">
+                        <ArrowDownBold />
+                    </el-icon></el-button>
+            </el-col>
+            <el-col style="flex-basis: 50%;">
+                <div>{{ lastPrice }}</div>
+                <div v-show="priceChanged" :style="{ color: ticker.change >= 0 ? 'green' : 'red' }">{{ priceChanged }}
+                </div>
+            </el-col>
+        </el-row>
+        <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
+            <!-- 选择订单类型，市价/止盈止损等 -->
+            <el-col style="flex-basis: 100px;">
+                <el-select :model-value="orderType" placeholder="Select" style="width: 100px;"
+                    @change="handleOrderTypeChange">
+                    <el-option v-for="item in ORDER_TYPES" :key="item" :label="orderTypesLabel[item]"
+                        :value="item"></el-option>
+                </el-select>
+            </el-col>
+            <!-- 合约仓位类型，只支持逐仓 -->
+            <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
+                <el-select :model-value="marginMode" @change="handleMarginModeChange">
+                    <el-option v-for="item in MARGIN_MODES" :key="item"
+                        :label="item === MARGIN_MODES.CROSS ? '全仓' : '逐仓'" :value="item"
+                        :disabled="item === MARGIN_MODES.CROSS"></el-option>
+                </el-select>
+            </el-col>
+            <!-- 合约杠杆倍数 -->
+            <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
+                <el-select :model-value="leverage" @change="handleLeverageChange" :disabled="this.canChangeLeverage">
+                    <el-option v-for="item in [1, 2, 3, 4, 5]" :key="item" :label="item + 'x'"
+                        :value="item"></el-option>
+                </el-select>
+            </el-col>
+        </el-row>
+        <!-- 买单或卖单 -->
+        <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
+            <el-col style="flex-basis: 50%">
+                <el-button :type="orderSide === ORDER_SIDES.BUY ? 'success' : ''"
+                    :disabled="isSideDisabled(ORDER_SIDES.BUY)" style="width: 100%; outline: none;"
+                    @click="handleSideChange(ORDER_SIDES.BUY)">{{ buyLabel
+                    }}</el-button>
+            </el-col>
+            <el-col style="flex-basis: 50%;">
+                <el-button :type="orderSide === ORDER_SIDES.SELL ? 'danger' : ''" style="width: 100%; outline: none;"
+                    :disabled="isSideDisabled(ORDER_SIDES.SELL)" @click="handleSideChange(ORDER_SIDES.SELL)">{{
+                    sellLabel
+                    }}</el-button>
+            </el-col>
+        </el-row>
+        <!-- 可用余额 -->
+        <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px;">
+            <el-col style="flex-basis: auto; height: 100%;">可用</el-col>
+            <el-col style="flex-basis: auto; height: 100%;">
+                <template v-if="!Number.isNaN(displayAvaiableOrderAmount)">
+                    {{ displayAvaiableOrderAmount }}{{
+                    isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
+                </template>
+            </el-col>
+        </el-row>
+        <!-- 条件委托触发价格 -->
+        <div v-show="orderType === ORDER_TYPES.CONDITION"
+            style="display: flex; flex-direction: column; padding: 0 10px;">
+            <el-input v-model="triggerPrice" type="number" clearable :controls="false" :min="0"
+                :placeholder="`触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
+        </div>
+        <!-- 止盈止损触发价格 -->
+        <div v-show="orderType === ORDER_TYPES.SLTP" style="display: flex; flex-direction: column; padding: 0 10px;">
             <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
-                :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
-        </div>
-        <div style="display: flex; align-items: center;">
+                :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
             <el-input v-model="slPrice" type="number" clearable :controls="false" :min="0"
-                :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
+                :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`"
+                style="width: 100%; margin-top: 5px;"></el-input>
         </div>
-    </div>
-    <!-- 下单 -->
-    <div style="display: flex; padding: 20px 10px;">
-        <el-button :type="isFormValid ? 'primary' : 'info'" size="large" style="flex-grow: 1;" :disabled="!isFormValid"
-            @click="handleCreateOrder">{{ this.orderId ? `改单(${this.orderId})` : '下单' }}</el-button>
-    </div>
-    <!-- 余额/仓位/委托... -->
-    <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
-        <el-tab-pane label="总览">
-            <template v-if="curOrders.length">
-                <Order v-for="item in curOrders" :key="item._id" :order="item" @cancel="handleCancelOrder"
+        <!-- 下单仓位数量 -->
+        <div style="position: relative; padding: 10px 10px;">
+            <el-input type="number" clearable v-model="orderAmount" @change="handleAmountChange"
+                @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : '数量(保证金)'"
+                :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
+                <template #prefix>
+                    <span v-show="orderUsePct">预估</span>
+                </template>
+                <template #append>
+                    <el-select style="width: 100px;" :model-value="orderAmountUnit" :disabled="false"
+                        @change="handleAmountUnitChange">
+                        <el-option :label="market[ORDER_AMOUNT_TYPES.BASE]"
+                            :value="ORDER_AMOUNT_TYPES.BASE"></el-option>
+                        <el-option :label="market[ORDER_AMOUNT_TYPES.QUOTE]"
+                            :value="ORDER_AMOUNT_TYPES.QUOTE"></el-option>
+                    </el-select>
+                </template>
+            </el-input>
+            <!-- 可下单总数为预估且百分比下单时使用的真实资产数量 -->
+            <span v-show="orderUsePct"
+                style="position: absolute; top: 45px; color: white; font-size: 12px; left: 45%; transform: translateX(-50%);">{{
+                realCurrencyAmount }}</span>
+        </div>
+        <!-- 下单仓位数量百分比 -->
+        <div style="padding: 10px 10px 10px 20px;">
+            <el-slider v-model="orderAmountPct" @change="handleAmountPctChange"
+                :marks="{ 0: '0', 25: '25', 50: '50', 75: '75', 100: '100' }" show-input size="small"
+                :show-tooltip="true" />
+        </div>
+        <!-- 下单是否附带止盈止损 -->
+        <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 10px 10px 0 10px;">
+            <el-checkbox v-model="orderWithSLTP" label="止盈止损" />
+        </div>
+        <!-- 合约只减仓 -->
+        <div v-show="reduceOnly" style="display: flex; align-items: center; padding: 10px 10px 0 10px;">
+            <el-checkbox :model-value="true" label="只减仓" disabled />
+        </div>
+        <!-- 下单附带止盈止损设置 -->
+        <div v-show="orderWithSLTP" style="padding: 0 10px;">
+            <div style="display: flex; align-items: center; margin-bottom: 5px;">
+                <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
+                    :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
+            </div>
+            <div style="display: flex; align-items: center;">
+                <el-input v-model="slPrice" type="number" clearable :controls="false" :min="0"
+                    :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
+            </div>
+        </div>
+        <!-- 下单 -->
+        <div style="display: flex; padding: 20px 10px;">
+            <el-button :type="isFormValid ? 'primary' : 'info'" size="large" style="flex-grow: 1;"
+                :disabled="!isFormValid" @click="handleCreateOrder">{{ this.orderId ? `改单(${this.orderId})` : '下单'
+                }}</el-button>
+        </div>
+        <!-- 余额/仓位/委托... -->
+        <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
+            <el-tab-pane label="总览">
+                <template v-if="curOrders.length">
+                    <Order v-for="item in curOrders" :key="item._id" :order="item" @cancel="handleCancelOrder"
+                        @edit="handleEditOrder" @jump-market="handleJumpMarket">
+                    </Order>
+                </template>
+                <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition"
+                    @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
+                </Position>
+                <Balance v-for="item in balances" :key="item.currency" :balance="item"
+                    :isCurQuote="item.currency === market.quote" @jump-market="handleJumpMarket">
+                </Balance>
+            </el-tab-pane>
+            <el-tab-pane :label="`仓位(${positions?.length})`">
+                <Position v-for="item in positions" :key="item.symbol" :position="item"
+                    @close-position="handleClosePosition" @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
+                </Position>
+            </el-tab-pane>
+            <el-tab-pane :label="`委托(${orders.length})`">
+                <Order v-for="item in orders" :key="item._id" :order="item" @cancel="handleCancelOrder"
                     @edit="handleEditOrder" @jump-market="handleJumpMarket">
                 </Order>
-            </template>
-            <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition"
-                @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
-            </Position>
-            <Balance v-for="item in balances" :key="item.currency" :balance="item"
-                :isCurQuote="item.currency === market.quote" @jump-market="handleJumpMarket">
-            </Balance>
-        </el-tab-pane>
-        <el-tab-pane :label="`仓位(${positions?.length})`">
-            <Position v-for="item in positions" :key="item.symbol" :position="item"
-                @close-position="handleClosePosition" @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
-            </Position>
-        </el-tab-pane>
-        <el-tab-pane :label="`委托(${orders.length})`">
-            <Order v-for="item in orders" :key="item._id" :order="item" @cancel="handleCancelOrder"
-                @edit="handleEditOrder" @jump-market="handleJumpMarket">
-            </Order>
-        </el-tab-pane>
-    </el-tabs>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
 </template>
 
 <style scoped>

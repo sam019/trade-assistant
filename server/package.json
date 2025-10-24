@@ -5,7 +5,7 @@
     "dev": "tsx --env-file=.env --watch src/app.js",
     "build": "tsc --env-file=.env.production",
     "start": "node dist/index.js --env-file=.env",
-    "dev-mongo": "mongod --config=\"c:/Program Files/MongoDB/server/8.2/bin/mongod.cfg\" && mongoose && rs.initiate()"
+    "mongo": "mongod --config=\"c:/Program Files/MongoDB/server/8.2/bin/mongod.cfg\" && mongoose && rs.initiate()"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.5",

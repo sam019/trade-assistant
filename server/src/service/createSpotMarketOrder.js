@@ -42,7 +42,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
 }
 
 // 创建现货市价单
-export default async function createSpotMarketOrder(data) {
+export default async function createSpotMarketOrder(data, options = {}) {
     const { exchange, symbol, side, amount, unit, usePct, amountPct, withSLTP, slPrice, tpPrice, withTWAP, totalMinute } = data
     /* todo 校验 */
     const market = getExchangeMonitor(exchange).markets.spot.find(mar => mar.symbol === symbol)
@@ -107,7 +107,10 @@ export default async function createSpotMarketOrder(data) {
     if (withSLTP) {
         sltpParams.amount = result.filled
         sltpParams.unit = ORDER_AMOUNT_TYPES.BASE
-        await orderWatcher.creatOrder(sltpParams)
+        const order = orderWatcher.creatOrder(sltpParams)
+        if (!options.skipSLTPOrderSave) {
+            await order
+        }
     }
     return result
 }

@@ -48,7 +48,7 @@ function getRealAmount({ balance, lastPrice, _id, amount, unit, exchange, symbol
 
 export default async function checkPerpCondOrder(order, ticker) {
     // console.log('checkLinearPerpOrder', order.symbol, order.slPrice, order.tpPrice)
-    const { _id, symbol, side, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice } = order
+    const { _id, symbol, side, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice, leverage } = order
     try {
         if (orderWatcher.isOrderDealing(_id)) {
             return
@@ -65,6 +65,7 @@ export default async function checkPerpCondOrder(order, ticker) {
             withSLTP,
             slPrice,
             tpPrice,
+            leverage,
         }
         const balance = cSymbol.isLinear
             ? getExchangeMonitor(exchange).balance.linear[cSymbol.quote]
@@ -78,12 +79,12 @@ export default async function checkPerpCondOrder(order, ticker) {
             const { realAmount, realUnit } = getRealAmount({ balance, _id, lastPrice, amount, unit, exchange, symbol, cSymbol })
             params.amount = realAmount
             params.unit = realUnit
-
+            const options = { skipSLTPOrderSave: true }
             let result
             if (cSymbol.isLinear) {
-                result = await service.createLinearPerpMarketOrder(params)
+                result = await service.createLinearPerpMarketOrder(params, options)
             } else {
-                result = await service.createInversePerpMarketOrder(params)
+                result = await service.createInversePerpMarketOrder(params, options)
             }
             
             console.log(`条件委托结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 买入数量:${result.amount}`)
