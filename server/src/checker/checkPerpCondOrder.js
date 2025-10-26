@@ -4,7 +4,7 @@ import { checkSymbol } from '../../../share/utils.js'
 import service from '../service'
 import orderWatcher from '../monitor/orderMonitor'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { orderModel } from '../database/db.js'
+import logger from '../logger.js'
 
 function getRealAmount({ balance, lastPrice, _id, amount, unit, exchange, symbol, cSymbol }) {
     let realAmount = amount, realUnit = unit
@@ -73,28 +73,30 @@ export default async function checkPerpCondOrder(order, ticker) {
         // console.log('global.__Force?.v()', global.__Force?.v())
         if ((side === ORDER_SIDES.BUY ? lastPrice < triggerPrice : lastPrice > triggerPrice) || global.__Force?.v()) {
             // 多单且价格小于触发价，空单且价格大于触发价，触发委托
-            console.log(`触发条件委托, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
+            // console.log(`触发条件委托, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             orderWatcher.markOrderDealing(_id)
 
             const { realAmount, realUnit } = getRealAmount({ balance, _id, lastPrice, amount, unit, exchange, symbol, cSymbol })
             params.amount = realAmount
             params.unit = realUnit
             const options = { skipSLTPOrderSave: true }
+            logger.cond({ exchange, symbol, side: params.side, lastPrice, triggerPrice, amount : params.amount, unit: params.unit })
             let result
             if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params, options)
             } else {
                 result = await service.createInversePerpMarketOrder(params, options)
             }
-            
-            console.log(`条件委托结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 买入数量:${result.amount}`)
+            logger.condSucc({ exchange, symbol, side: params.side, amount: result.filled, price: result.price, unit: ORDER_AMOUNT_TYPES.CONTRACT })
+            // console.log(`条件委托结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 买入数量:${result.filled}`)
             await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        console.log('条件委托出错, id:' + _id, e)
+        logger.condErr({ exchange, symbol, e })
+        // console.log('条件委托出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
     }

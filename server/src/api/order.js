@@ -27,7 +27,6 @@ app.post('/create', async function(c) {
         const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, type, side, undefined, undefined, __params)
         return c.json(result)
     }
-    console.log('create order', symbol, type)
 
     const cSymbol = checkSymbol(symbol)
 

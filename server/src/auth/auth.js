@@ -26,7 +26,7 @@ app.post('/', async function authorize(c) {
             httpOnly: true,
             secure: true,
             sameSite: 'none',
-            maxAge: 1 * 60 * 60,
+            maxAge: 24 * 60 * 60,
         })
         return c.text('ok')
     }

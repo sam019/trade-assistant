@@ -8,15 +8,15 @@ const service = axios.create({
     // timeout: 1000,
 })
 
-service.interceptors.request.use(function (config) {
-    // Do something before request is sent
-    // config.data = Object.assign(config.data || {}, { socketId: socket?.socket.id })
-    // console.log('interceptors request', config.data, socket.socket)
-    return config
-}, function (error) {
-    // Do something with request error
-    return Promise.reject(error)
-})
+// service.interceptors.request.use(function (config) {
+//     // Do something before request is sent
+//     // config.data = Object.assign(config.data || {}, { socketId: socket?.socket.id })
+//     // console.log('interceptors request', config.data, socket.socket)
+//     return config
+// }, function (error) {
+//     // Do something with request error
+//     return Promise.reject(error)
+// })
 
 export async function getSupportedExchanges() {
     const response = await service.post('/exchange/supported')

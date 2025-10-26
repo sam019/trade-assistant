@@ -6,6 +6,7 @@ import { orderModel } from '../database/db'
 import service from '../service'
 import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
 import { checkSymbol } from '../../../share/utils.js'
+import logger from '../logger.js'
 
 function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol, cSymbol }) {
     let realAmount = amount, realUnit = unit
@@ -42,17 +43,14 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         if (!lastPrice) {
             throw new Error('错误：无法获取tick：' + symbol)
         }
-        console.log('check order', triggerPrice, lastPrice)
+        // console.log('check order', triggerPrice, lastPrice)
         const cSymbol = checkSymbol(symbol)
         const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]
         // console.log(getExchangeMonitor(exchange).balance.spot[currency])
         if (lastPrice <= triggerPrice || global.__Force?.v()) {
-            console.log(`触发条件委托订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             orderWatcher.markOrderDealing(_id)
-            
             const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
-            const options = { skipSLTPOrderSave: true }
-            const result = await service.createSpotMarketOrder({
+            const params = {
                 exchange,
                 symbol,
                 amount: realAmount,
@@ -61,15 +59,19 @@ export default async function checkSpotSLTPOrder(order, ticker) {
                 withSLTP,
                 slPrice,
                 tpPrice,
-            }, options)
-            console.log(`条件委托订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 买入数量:${result.filled}${cSymbol.base}`)
+            }
+            const options = { skipSLTPOrderSave: true }
+            logger.cond({ exchange, symbol, side: params.side, lastPrice, triggerPrice, amount: params.amount, unit: params.unit })
+            // console.log(`触发条件委托订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
+            const result = await service.createSpotMarketOrder(params, options)
+            logger.condSucc({ exchange, symbol, side: params.side, amount: result.filled, price: result.price, unit: cSymbol.base })
+            // console.log(`条件委托订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 买入数量:${result.filled}${cSymbol.base}`)
             await orderWatcher.resolveOrder(_id)
-            // console.log('order delete success', dOR)
             // orderWatcher.unmarkOrderDealing(_id);
-
         }
     } catch (e) {
-        console.log('条件委托出错, id:' + _id, e)
+        logger.condErr({ exchange, symbol, e })
+        // console.log('条件委托出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
         // throw e;

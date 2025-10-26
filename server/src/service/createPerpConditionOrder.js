@@ -10,7 +10,7 @@ export default async function createPerpConditionOrder(data) {
     const { exchange, symbol, side, amount, unit, usePct, amountPct, triggerPrice, leverage, id, withSLTP, slPrice, tpPrice } = data
     const { linear, inverse } = getExchangeMonitor(exchange).markets
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol)
-    console.log('condition', triggerPrice)
+    // console.log('condition', triggerPrice)
     if (!triggerPrice) {
         throw new Error('委托触发价格设置错误')
     }

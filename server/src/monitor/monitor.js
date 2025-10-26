@@ -11,7 +11,7 @@ import checkPerpCondOrder from '../checker/checkPerpCondOrder.js'
 
 import { ORDER_TYPES } from '../../../share/const.js'
 import { checkSymbol } from '../../../share/utils.js'
-
+import logger from '../logger.js'
 class Monitor {
     /* 后台监控主函数 */
     async start() {
@@ -45,40 +45,47 @@ class Monitor {
                     }
                 })
                 // 检测现货止盈止损和条件委托 合约条件委托
-                const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
-                    // console.log(orders)
-                    tickOrders.forEach((order) => {
+                if (tickOrders.length) {
+                    const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
+                        logger.ticker({ exchange })
+                        // console.log(orders)
+                        tickOrders.forEach((order) => {
                         // console.log(order.symbol)
-                        const ticker = tickers[order.symbol]
-                        if (ticker) {
-                            const cSymbol = checkSymbol(order.symbol)
-                            if (cSymbol.isSpot) {
-                                if (order.type === ORDER_TYPES.CONDITION) {
-                                    checkSpotCondOrder(order, ticker)
+                            const ticker = tickers[order.symbol]
+                            if (ticker) {
+                                const cSymbol = checkSymbol(order.symbol)
+                                if (cSymbol.isSpot) {
+                                    if (order.type === ORDER_TYPES.CONDITION) {
+                                        checkSpotCondOrder(order, ticker)
+                                    } else {
+                                        checkSpotSLTPOrder(order, ticker)
+                                    }
                                 } else {
-                                    checkSpotSLTPOrder(order, ticker)
-                                }
-                            } else {
-                                if (order.type === ORDER_TYPES.CONDITION) {
-                                    checkPerpCondOrder(order, ticker)
+                                    if (order.type === ORDER_TYPES.CONDITION) {
+                                        checkPerpCondOrder(order, ticker)
+                                    }
                                 }
                             }
-                        }
+                        })
                     })
-                })
-                unsubs.push(unsubTicker)
-                // 检测合约止盈止损
-                const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
-                    // console.log(positions);
-                    positionOrders.forEach((order) => {
+                    unsubs.push(unsubTicker)
+                }
+                
+                if (positionOrders.length) {
+                    // 检测合约止盈止损
+                    const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
+                        logger.position({ exchange })
+                        // console.log(positions);
+                        positionOrders.forEach((order) => {
                         // console.log(order.symbol, match)
-                        const position = positions.find(pos => pos.symbol === order.symbol)
-                        if (position) {
-                            checkPerpSLTPOrder(order, position)
-                        }
+                            const position = positions.find(pos => pos.symbol === order.symbol)
+                            if (position) {
+                                checkPerpSLTPOrder(order, position)
+                            }
+                        })
                     })
-                })
-                unsubs.push(unsubPosition)
+                    unsubs.push(unsubPosition)
+                }
             })
         })
     }

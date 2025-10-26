@@ -39,7 +39,7 @@ export default function socketHandler(socket) {
         if (unsubscribeAccount) {
             unsubscribeAccount()
         }
-        console.log(`Client subscribed to account updates for exchange: ${data.exchange}`)
+        // console.log(`Client subscribed to account updates for exchange: ${data.exchange}`)
         const exchangeMonitor = getExchangeMonitor(data.exchange)
         if (exchangeMonitor) {
             // 向交易所订阅账户更新
@@ -53,7 +53,7 @@ export default function socketHandler(socket) {
     socket.on('unsubscribeAccount', (data) => {
         const unsubscribeAccount = subscribtionManager.get(data?.exchange, 'unsubscribeAccount')
         if (unsubscribeAccount) {
-            console.log(`Client unsubscribed from account updates for exchange: ${data.exchange}`)
+            // console.log(`Client unsubscribed from account updates for exchange: ${data.exchange}`)
             unsubscribeAccount()
             subscribtionManager.set(data.exchange, 'unsubscribeAccount', null)
         }
@@ -65,7 +65,7 @@ export default function socketHandler(socket) {
             unsubscribeTickers()
             subscribtionManager.set(data.exchange, 'unsubscribeTickers', null)
         }
-        console.log(`Client subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`)
+        // console.log(`Client subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`)
         const exchangeMonitor = getExchangeMonitor(data.exchange)
         if (exchangeMonitor) {
             const unsubscribeTickers = exchangeMonitor.onTickersUpdate(data.symbols, (tickers) => {
@@ -78,13 +78,13 @@ export default function socketHandler(socket) {
     socket.on('unsubscribeTickers', (data) => {
         const unsubscribeTickers = subscribtionManager.get(data?.exchange, 'unsubscribeTickers')
         if (unsubscribeTickers) {
-            console.log(`Client unsubscribed from tickers updates for exchange: ${data.exchange}`)
+            // console.log(`Client unsubscribed from tickers updates for exchange: ${data.exchange}`)
             unsubscribeTickers()
             subscribtionManager.set(data.exchange, 'unsubscribeTickers', null)
         }
     })
     socket.on('disconnect', () => {
         subscribtionManager.unsubscribeAll()
-        console.log('Client disconnected, cleaning up subscriptions')
+        // console.log('Client disconnected, cleaning up subscriptions')
     })
 }

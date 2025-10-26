@@ -1,5 +1,6 @@
 import { orderModel } from '../database/db'
 import { ORDER_STATES } from '../../../share/const'
+import logger from '../logger'
 
 export class OrderWatcher {
     static STATUS = {
@@ -11,7 +12,7 @@ export class OrderWatcher {
         this.orders = []
         this.ordersGroupByExchange = {}
         this.cbs = new Set()
-        this.orderStaus = new Map()
+        this.orderStatus = new Map()
     }
     async init() {
         this.fetch()
@@ -22,14 +23,17 @@ export class OrderWatcher {
         })
     }
     async fetch() {
-        this.orders = await this.findOpeningOrders()
-        this._groupOrdersByExchange()
-        console.log('orders update', this.orders.map(o => o.id))
-        Object.keys(this.orderStaus).forEach(key => {
-            if (!this.orders.some(order => order._id === key)) {
-                this.orderStaus.delete(key)
+        const orders = await this.findOpeningOrders()
+
+        this.orderStatus.keys().forEach(key => {
+            if (!orders.some(order => String(order._id) === String(key))) {
+                this.orderStatus.delete(key)
             }
         })
+        this.orders = orders.filter(order => !this.orderStatus.keys().some(key => String(order._id) === String(key)))
+        logger.order(this.orders.length)
+        this._groupOrdersByExchange()
+        // console.log('orders update', orders.map(o => o._id), this.orders.map(o => o._id), this.orderStatus)
         this.cbs.forEach(cb => cb && cb({ orders: this.orders, ordersGroupByExchange: this.ordersGroupByExchange }))
     }
     _groupOrdersByExchange() {
@@ -75,26 +79,26 @@ export class OrderWatcher {
 
     // setOrderStatus(id, status) {
     //     if (status === OrderWatcher.STATUS.CLOSED) {
-    //         this.orderStaus.delete(id);
+    //         this.orderStatus.delete(id);
     //     }
     //     // const order = this.orders.find(order => order.id === id);
-    //     this.orderStaus.set(id, status);
+    //     this.orderStatus.set(id, status);
     // }
 
     // getOrderStatus(id) {
-    //     return this.orderStaus.get(id);
+    //     return this.orderStatus.get(id);
     // }
 
     markOrderDealing(id) {
-        this.orderStaus.set(id, OrderWatcher.STATUS.PENDDING)
+        this.orderStatus.set(id, OrderWatcher.STATUS.PENDDING)
     }
 
     unmarkOrderDealing(id) {
-        this.orderStaus.delete(id)
+        this.orderStatus.delete(id)
     }
 
     isOrderDealing(id) {
-        return this.orderStaus.get(id) === OrderWatcher.STATUS.PENDDING
+        return this.orderStatus.get(id) === OrderWatcher.STATUS.PENDDING
     }
 
     async findOpeningOrders() {
@@ -114,14 +118,14 @@ export class OrderWatcher {
         return await orderModel.findByIdAndUpdate(id, data)
     }
 
-    async resolveOrder(_id) {
+    async resolveOrder(id) {
         // return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.RESOLVED })
-        return await orderModel.findByIdAndDelete(_id)
+        return await orderModel.findByIdAndDelete(id)
     }
 
-    async closeOrder(_id) {
+    async closeOrder(id) {
         // return await orderModel.findByIdAndUpdate(_id, { state: ORDER_STATES.CLOSED })
-        return await orderModel.findByIdAndDelete(_id)
+        return await orderModel.findByIdAndDelete(id)
     }
 }
 const orderWatcher = new OrderWatcher()

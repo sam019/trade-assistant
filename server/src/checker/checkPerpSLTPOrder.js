@@ -4,6 +4,7 @@ import { checkSymbol } from '../../../share/utils.js'
 import service from '../service'
 import orderWatcher from '../monitor/orderMonitor'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
+import logger from '../logger.js'
 
 function getRealAmount({ position, amount, unit, exchange, symbol, cSymbol }) {
     let realAmount = amount, realUnit = unit
@@ -73,46 +74,48 @@ export default async function checPerpSLTPOrder(order, position) {
         const isTpTriggered = position.side === POSITION_SIDES.LONG ? position.markPrice >= tpPrice : position.markPrice <= tpPrice
         if (slPrice && isSlTriggered || global.__Force?.v()) {
             // 判断是否止损
-            console.log(`触发仓位止损, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
+            // console.log(`触发仓位止损, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
 
             const { realAmount, realUnit } = getRealAmount({ position, amount, unit, exchange, symbol, cSymbol })
             params.amount = realAmount
             params.unit = realUnit
-
+            logger.sltp({ exchange, symbol, isSL: true, side: params.side, lastPrice: position.markPrice, triggerPrice: slPrice, amount: params.amount, unit: params.unit })
             let result
             if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params)
             } else {
                 result = await service.createInversePerpMarketOrder(params)
             }
-            
-            console.log(`仓位止损结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
+            logger.sltpSucc({ exchange, symbol, isSL: true, side: params.side, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT, price: result.price })
+            // console.log(`仓位止损结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)
             // orderWatcher.unmarkOrderDealing(_id);
         } else if (tpPrice && isTpTriggered) {
             // 判断是否止盈
-            console.log(`触发仓位止盈, 交易所:${exchange} 交易对:${symbol} 触发价格:${tpPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
+            // console.log(`触发仓位止盈, 交易所:${exchange} 交易对:${symbol} 触发价格:${tpPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
 
             const { realAmount, realUnit } = getRealAmount({ position, amount, unit, exchange, symbol, cSymbol })
             params.amount = realAmount
             params.unit = realUnit
-
+            logger.sltp({ exchange, symbol, isSL: false, side: params.side, lastPrice: position.markPrice, triggerPrice: tpPrice, amount: params.amount, unit: params.unit })
             let result
             if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params)
             } else {
                 result = await service.createInversePerpMarketOrder(params)
             }
-            console.log(`仓位止盈结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
+            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT, price: result.price })
+            // console.log(`仓位止盈结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        console.log('仓位止盈止损出错, id:' + _id, e)
+        logger.sltpErr({ exchange, symbol, e })
+        // console.log('仓位止盈止损出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
     }

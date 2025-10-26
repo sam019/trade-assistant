@@ -14,6 +14,7 @@ class ExchangeModel {
         // console.log('process.env.NODE_ENV', process.env.NODE_ENV)
         this._test = process.env.TESTNET
         this.fetchInterval = 1000
+        this.errRestTime = 5000
 
         if (this._test) {
             // console.log('new ExchangeModel', exchange)
@@ -88,7 +89,7 @@ class ExchangeModel {
             await this.exchange.loadMarkets()
         } catch (e) {
             console.log(e)
-            await sleep(5000)
+            await sleep(this.errRestTime)
             this.loadmarkets()
         }
         
@@ -155,7 +156,7 @@ class ExchangeModel {
                 await sleep(this.fetchInterval, sign)
             } catch (e) {
                 console.error('startWatchBalance error', e.message)
-                await sleep(5000)
+                await sleep(this.errRestTime)
             }
         }
     }
@@ -213,7 +214,7 @@ class ExchangeModel {
                 })
                 // throw e;
                 console.log('startWatchPositions error', e.message)
-                await sleep(5000)
+                await sleep(this.errRestTime)
             }
         }
     }
@@ -277,7 +278,7 @@ class ExchangeModel {
 
     async startWatchOrders() {
         orderWatcher.onOrdersUpdate(({ ordersGroupByExchange }) => {
-            console.log('WatchOrders', ordersGroupByExchange[this.exchangeName])
+            // console.log('WatchOrders', ordersGroupByExchange[this.exchangeName])
             this.orders = ordersGroupByExchange[this.exchangeName] || {}
             this._triggerAccountCbs('orders')
         })
@@ -300,7 +301,7 @@ class ExchangeModel {
                 const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
                 this.tickers = tickers
                 // console.log('tickers', Object.keys(tickers))
-                console.log('tickers update', new Date().toLocaleTimeString(), this.exchange.id, Object.entries(tickers).map(([k, t]) => [k, t.last]).length)
+                // console.log('tickers update', new Date().toLocaleTimeString(), this.exchange.id, Object.entries(tickers).map(([k, t]) => [k, t.last]).length)
                 // console.log(this.tickersCbSymbolMap)
                 this.tickersCbSymbolMap.entries().forEach(([cb, cbSymbols]) => {
                     const r = cbSymbols.reduce((a, b) => Object.assign(a, { [b]: tickers[b] }), {})
@@ -334,7 +335,7 @@ class ExchangeModel {
                     console.log(this.exchange.id, 'watchTickers failed with:', e.message)
                     // retry or whatever
                 }
-                await sleep(5000)
+                await sleep(this.errRestTime)
             }
         }
     }

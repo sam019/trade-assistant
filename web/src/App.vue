@@ -557,7 +557,6 @@ export default {
                     return -1
                 }
                 if (b.currency === this.market.quote) {
-                    _
                     return 1
                 }
                 const stableCoins = Object.values(STABLE_COINS)

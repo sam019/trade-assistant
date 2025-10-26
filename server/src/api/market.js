@@ -79,7 +79,8 @@ app.post('/get', async function getrMarket(c) {
     const body = await c.req.json()
     const { exchange, symbol } = body
     while (true) {
-        const market = getExchangeMonitor(exchange).exchange.markets[symbol]
+        const markets = getExchangeMonitor(exchange).exchange?.markets
+        const market = markets && markets[symbol]
         if (market) {
             // console.log('get market', market)
             return c.json(market)
@@ -126,7 +127,7 @@ app.post('/setLeverage', async function getLeverage(c) {
     const { exchange, symbol, leverage } = body
     const exchangeMonitor = getExchangeMonitor(exchange)
     const result = await exchangeMonitor.exchange.setLeverage(leverage, symbol)
-    console.log('setLeverage', result)
+    // console.log('setLeverage', result)
     return c.json(result)
 })
 
