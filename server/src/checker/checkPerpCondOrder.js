@@ -99,5 +99,8 @@ export default async function checkPerpCondOrder(order, ticker) {
         // console.log('条件委托出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
+        if (global.isDev) {
+            throw e
+        }
     }
 }

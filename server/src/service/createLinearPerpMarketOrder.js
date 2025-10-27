@@ -4,6 +4,7 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES, TWAP_INTERVAL } from '../../../share/const.js'
 import { getPrecisionLength, sleep } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
+import logger from '../logger.js'
 
 export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market }) {
     const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
@@ -32,7 +33,7 @@ export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, para
             }
             await sleep(TWAP_INTERVAL, sign)
         } catch (e) {
-            console.log(e)
+            logger.error('createTWAPOrder error: ', e.message)
             throw e
         }
     }

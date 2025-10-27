@@ -6,7 +6,7 @@ import {
 } from 'hono/cookie'
 
 const hash = crypto.createHash('sha256')
-const cookieKey = 'abcde'
+const cookieKey = 'test'
 
 class Auth {
     pwdHash = hash.update(process.env.PASSWORD).digest('hex')

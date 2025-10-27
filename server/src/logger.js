@@ -36,6 +36,9 @@ function getOperationName(symbol, side) {
     }
 }
 
+const TICKER_SUSPENPOSITIOND_TIME = 5 * 1000
+const POSITION_SUSPEND_TIME = 5 * 1000
+
 class Logger {
     order(amount) {
         _logger.info(`Orders changed, amount:${amount}`)
@@ -45,38 +48,34 @@ class Logger {
     _receiveTickerTimout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Tickers SUSPEND receive from ${exchange}`)
-            clearTimeout(this._tickerReceiveTimeout[exchange])
             this._tickerReceiveTimeout[exchange] = null
-        }, 10 * 1000)
+        }, TICKER_SUSPENPOSITIOND_TIME)
     }
     ticker({ exchange }) {
         if (!this._tickerReceiveTimeout[exchange]) {
             // console.log('ticker log new', exchange)
             _logger.info(`Tickers START receive from ${exchange}`)
-            this._tickerReceiveTimeout[exchange] = this._receiveTickerTimout(exchange)
         } else {
             // console.log('ticker log contiu', exchange)
             clearTimeout(this._tickerReceiveTimeout[exchange])
-            this._tickerReceiveTimeout[exchange] = this._receiveTickerTimout(exchange)
         }
+        this._tickerReceiveTimeout[exchange] = this._receiveTickerTimout(exchange)
     }
 
     _positionReceiveTimout = {}
     _receivePositionTimeout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Positions SUSPEND receive from ${exchange}`)
-            clearTimeout(this._positionReceiveTimout[exchange])
             this._positionReceiveTimout[exchange] = null
-        }, 10 * 1000)
+        }, POSITION_SUSPEND_TIME)
     }
     position({ exchange }) {
         if (!this._positionReceiveTimout[exchange]) {
             _logger.info(`Positions START receive from ${exchange}`)
-            this._positionReceiveTimout[exchange] = this._receivePositionTimeout(exchange)
         } else {
             clearTimeout(this._positionReceiveTimout[exchange])
-            this._positionReceiveTimout[exchange] = this._receivePositionTimeout(exchange)
         }
+        this._positionReceiveTimout[exchange] = this._receivePositionTimeout(exchange)
     }
 
     sltp({ exchange, symbol, isSL, side, triggerPrice, lastPrice, amount, unit }) {
@@ -111,4 +110,8 @@ class Logger {
     }
 }
 
-export default new Logger()
+export default new Proxy(new Logger, {
+    get(t, p) {
+        return t[p] || _logger[p]
+    },
+})

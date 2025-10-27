@@ -4,6 +4,9 @@ export function getPrecisionLength(decimal) {
 
 export function checkSymbol(symbol) {
     const match = /(\w+)\/(\w+):?(\w+)?/.exec(symbol || 0)
+    if (!match) {
+        throw new Error('invalid symbol')
+    }
     return {
         isSpot: !match[3],
         isLinear: match[3] === match[2],

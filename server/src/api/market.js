@@ -85,7 +85,7 @@ app.post('/get', async function getrMarket(c) {
             // console.log('get market', market)
             return c.json(market)
         }
-        sleep(1000)
+        await sleep(1000)
     }
 })
 

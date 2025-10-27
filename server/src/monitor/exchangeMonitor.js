@@ -4,8 +4,8 @@ import _ from 'lodash-es'
 import orderWatcher from './orderMonitor'
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES } from '../../../share/const.js'
-import { checkSymbol } from '../../../share/utils.js'
-import { sleep } from '../../../share/utils.js'
+import { checkSymbol, sleep } from '../../../share/utils.js'
+import logger from '../logger.js'
 
 const exchangeModels = {}
 
@@ -88,7 +88,7 @@ class ExchangeModel {
         try {
             await this.exchange.loadMarkets()
         } catch (e) {
-            console.log(e)
+            logger.error('loadmarkets error: ', e.message)
             await sleep(this.errRestTime)
             this.loadmarkets()
         }
@@ -155,7 +155,7 @@ class ExchangeModel {
                 }
                 await sleep(this.fetchInterval, sign)
             } catch (e) {
-                console.error('startWatchBalance error', e.message)
+                logger.error('startWatchBalance error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }
@@ -208,12 +208,12 @@ class ExchangeModel {
                 // }
             } catch (e) {
                 this.awaitPositionsUpdateCb.entries().forEach(([cb]) => {
-                    console.log('awaitTickersUpdateCb error', cb[1])
+                    // console.log('awaitTickersUpdateCb error', cb[1])
                     cb[1](e)
                     this.awaitPositionsUpdateCb.delete(cb)
                 })
                 // throw e;
-                console.log('startWatchPositions error', e.message)
+                logger.error('startWatchPositions error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }
@@ -321,20 +321,21 @@ class ExchangeModel {
                 await sleep(this.fetchInterval, sign)
             } catch (e) {
                 this.awaitTickersUpdateCb.entries().forEach(([cb]) => {
-                    console.log('awaitTickersUpdateCb error', cb[1])
+                    // console.log('awaitTickersUpdateCb error', cb[1])
                     cb[1](e)
                     this.awaitTickersUpdateCb.delete(cb)
                 })
-                if (e instanceof ccxt.NetworkError) {
-                    console.log(this.exchange.id, 'watchTickers failed due to a network error:', e.message)
-                    // retry or whatever
-                } else if (e instanceof ccxt.ExchangeError) {
-                    console.log(this.exchange.id, 'watchTickers failed due to exchange error:', e.message)
-                    // retry or whatever
-                } else {
-                    console.log(this.exchange.id, 'watchTickers failed with:', e.message)
-                    // retry or whatever
-                }
+                // if (e instanceof ccxt.NetworkError) {
+                //     console.log(this.exchange.id, 'watchTickers failed due to a network error:', e.message)
+                //     // retry or whatever
+                // } else if (e instanceof ccxt.ExchangeError) {
+                //     console.log(this.exchange.id, 'watchTickers failed due to exchange error:', e.message)
+                //     // retry or whatever
+                // } else {
+                //     console.log(this.exchange.id, 'watchTickers failed with:', e.message)
+                //     // retry or whatever
+                // }
+                logger.error('startWatchTickers error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }
