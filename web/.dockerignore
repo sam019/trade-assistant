@@ -1,0 +1,6 @@
+node_modules
+dist
+.vscode
+.env
+README.md
+trade-assistant.code-workspace

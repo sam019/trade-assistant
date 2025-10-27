@@ -2,11 +2,12 @@ import crypto from 'crypto'
 import { Hono } from 'hono'
 import {
     setCookie,
-    getCookie
+    getCookie,
 } from 'hono/cookie'
 
 const hash = crypto.createHash('sha256')
 const cookieKey = 'test'
+const noAuthText = 'Hellow World'
 
 class Auth {
     pwdHash = hash.update(process.env.PASSWORD).digest('hex')
@@ -30,7 +31,7 @@ app.post('/', async function authorize(c) {
         })
         return c.text('ok')
     }
-    return c.text('no', 401)
+    return c.text(noAuthText, 401)
 })
 function getPwdFromCookie(cookie = '', key) {
     const match = cookie.match(new RegExp(`(^| )${key}=([^;]+)`))
@@ -57,7 +58,7 @@ export async function httpAuth(c, next) {
     } else if (auth.verify(getCookie(c, cookieKey))) {
         await next()
     } else {
-        return c.text('no', 401)
+        return c.text(noAuthText, 401)
     }
 }
 export const authRouter = app

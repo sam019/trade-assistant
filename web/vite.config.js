@@ -6,6 +6,8 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import fs from 'fs'
 
+const oneYearInSeconds = 60 * 60 * 24 * 365
+
 // https://vite.dev/config/
 export default defineConfig({
     plugins: [
@@ -23,6 +25,9 @@ export default defineConfig({
         https: {
             key: fs.readFileSync('../localhost+3-key.pem'),
             cert: fs.readFileSync('../localhost+3.pem'),
+        },
+        headers: {
+            'Strict-Transport-Security': `max-age=${oneYearInSeconds}`,
         },
     },
 })

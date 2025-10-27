@@ -50,18 +50,21 @@ async function init() {
     //     console.error(err.message);
     //     return c.json(err.message, 500);
     // })
+    const serverParams = {
+        fetch: app.fetch,
+        port: 3000,
+    }
+    if (global.isDev) {
+        serverParams.createServer = createServer
+        serverParams.serverOptions = {
+            key: fs.readFileSync('../localhost+3-key.pem'),
+            cert: fs.readFileSync('../localhost+3.pem'),
+        }
+    }
     const server = serve(
-        {
-            fetch: app.fetch,
-            createServer: createServer,
-            port: 3000,
-            serverOptions: {
-                key: fs.readFileSync('../localhost+3-key.pem'),
-                cert: fs.readFileSync('../localhost+3.pem'),
-            },
-        },
+        serverParams,
         (info) => {
-            console.log(`Server is running on https://localhosts:${info.port}`)
+            console.log(`Server is running on https://localhost:${info.port}`)
         },
     )
     // console.log('corsOrigin', corsOrigin)
@@ -72,7 +75,7 @@ async function init() {
         },
     })
     io.use(ioAuth)
-    io.on("connection", socketHandler)
+    io.on('connection', socketHandler)
 }
 
 init()

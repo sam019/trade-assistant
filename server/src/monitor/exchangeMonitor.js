@@ -16,32 +16,30 @@ class ExchangeModel {
         this.fetchInterval = 1000
         this.errRestTime = 5000
 
+        const config = {
+            enableRateLimit: true,
+            apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
+            secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
+            options: {
+                // defaultType: 'future'
+            },
+        }
         if (this._test) {
-            // console.log('new ExchangeModel', exchange)
-            this.exchange = new ccxt.pro[exchange]({
-                enableRateLimit: true,
+            Object.assign(config, {
+                // verbose: true,
                 httpsProxy: process.env.HTTP_PROXY,
                 wssProxy: process.env.WS_PROXY,
                 apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
                 secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
-                // verbose: true,
-                options: {
-                    // defaultType: 'future'
-                },
-            })
-            this.exchange.enableDemoTrading(true)
-            // console.log(this.exchange.has['amountToPrecision '])
-            // this.exchange.setSandboxMode(true)
-            // console.log('setSandboxMode', exchange)
-            // console.log(process.env[`SECRET_KEY_${exchange.toUpperCase()}`])
-
-        } else {
-            this.exchange = new ccxt.pro[exchange]({
-                apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
-                secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
             })
         }
-        // console.log('unWatchTickers', this.exchange.has['unWatchTickers'])
+        // console.log(process.env[`SECRET_KEY_${exchange.toUpperCase()}`])
+        this.exchange = new ccxt.pro[exchange](config)
+        if (this._test) {
+            // this.exchange.setSandboxMode(true)
+            this.exchange.enableDemoTrading(true)
+        }
+
         this.exchangeName = exchange
         this.markets = {
             spot: [],

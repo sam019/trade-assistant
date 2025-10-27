@@ -1,0 +1,46 @@
+# secrets:
+services:
+    mongo:
+        image: mongo:latest
+        restart: unless-stopped
+        ports:
+            - 27017:27017
+        # environment:
+            # - MONGO_INITDB_ROOT_USERNAME=${ADMIN:-root}
+            # - MONGO_INITDB_ROOT_PASSWORD=${PASSWORD:?error}
+        volumes:
+            # - c:/Program Files/MongoDB/server/8.2/bin/data:/data/db
+            - data_db:/data/db
+        command: --oplogSize 192 --replSet rs0
+    
+    server:
+        build:
+            context: ./server
+            additional_contexts:
+                - share=./share
+        restart: unless-stopped
+    web:
+        build: 
+            context: ./web
+            additional_contexts:
+                - share=./share
+            args:
+                - NPM_REGISTRY
+        volumes:
+            - web_dist:/App/web/dist
+        # environment:
+    caddy:
+        image: caddy:latest
+        restart: unless-stopped
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./Caddyfile:/etc/caddy
+            - Caddy_data:/data
+            - web_dist:/srv/www
+        
+volumes:
+    data_db:
+    web_dist:
+    Caddy_data:
