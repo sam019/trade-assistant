@@ -1,6 +1,6 @@
-import { orderModel } from '../database/db'
-import { ORDER_STATES } from '../../../share/const'
-import logger from '../logger'
+import { orderModel } from '../database/db.js'
+import { ORDER_STATES } from '../../../share/const.js'
+import logger from '../logger.js'
 
 export class OrderWatcher {
     static STATUS = {

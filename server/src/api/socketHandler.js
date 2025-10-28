@@ -1,4 +1,4 @@
-import { getExchangeMonitor } from "../monitor/exchangeMonitor"
+import { getExchangeMonitor } from "../monitor/exchangeMonitor.js"
 
 class SubscribtionManager {
     get(...params) {

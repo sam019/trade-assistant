@@ -1,9 +1,9 @@
 import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import orderWatcher from '../monitor/orderMonitor'
-import { orderModel } from '../database/db'
-import service from '../service'
+import orderWatcher from '../monitor/orderMonitor.js'
+// import { orderModel } from '../database/db.js'
+import service from '../service/index.js'
 import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
 import { checkSymbol } from '../../../share/utils.js'
 import logger from '../logger.js'

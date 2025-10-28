@@ -1,11 +1,11 @@
 
-import createSpotMarketOrder from "./createSpotMarketOrder"
-import createSpotSLTPOrder from "./createSpotSLTPOrder"
-import createLinearPerpMarketOrder from "./createLinearPerpMarketOrder"
-import createPerpSLTPOrder from "./createPerpSLTPOrder"
-import createInversePerpMarketOrder from "./createInversePerpMarketOrder"
-import createSpotConditionOrder from "./createSpotConditionOrder"
-import createPerpConditionOrder from "./createPerpConditionOrder"
+import createSpotMarketOrder from "./createSpotMarketOrder.js"
+import createSpotSLTPOrder from "./createSpotSLTPOrder.js"
+import createLinearPerpMarketOrder from "./createLinearPerpMarketOrder.js"
+import createPerpSLTPOrder from "./createPerpSLTPOrder.js"
+import createInversePerpMarketOrder from "./createInversePerpMarketOrder.js"
+import createSpotConditionOrder from "./createSpotConditionOrder.js"
+import createPerpConditionOrder from "./createPerpConditionOrder.js"
 
 
 export default {

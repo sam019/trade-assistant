@@ -2,7 +2,7 @@
 
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { initExchangeMonitor, getExchangeMonitor } from './exchangeMonitor.js'
-import orderWatcher from './orderMonitor'
+import orderWatcher from './orderMonitor.js'
 
 import checkSpotSLTPOrder from '../checker/checkSpotSLTPOrder.js'
 import checkPerpSLTPOrder from '../checker/checkPerpSLTPOrder.js'

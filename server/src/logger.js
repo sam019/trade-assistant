@@ -1,7 +1,7 @@
 import log4js from 'log4js'
 
-import { ORDER_SIDES } from '../../share/const'
-import { checkSymbol } from '../../share/utils'
+import { ORDER_SIDES } from '../../share/const.js'
+import { checkSymbol } from '../../share/utils.js'
 
 // 配置日志记录器
 log4js.configure({

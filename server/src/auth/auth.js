@@ -10,7 +10,13 @@ const cookieKey = 'test'
 const noAuthText = 'Hellow World'
 
 class Auth {
-    pwdHash = hash.update(process.env.PASSWORD).digest('hex')
+    
+    constructor() {
+        if(!process.env.PASSWORD) {
+            throw new Error('Password must exist')
+        }
+        this.pwdHash = hash.update(process.env.PASSWORD).digest('hex')
+    }
     verify(pwd) {
         return pwd === this.pwdHash
     }
