@@ -17,11 +17,12 @@ import { authRouter, ioAuth, httpAuth } from "./auth/auth.js"
 
 import socketHandler from "./api/socketHandler.js"
 
+import { isDev } from "../../share/utils.js"
 
-global.isDev = process.env.NODE_ENV !== 'production'
+
 
 let corsOrigin
-if (global.isDev) {
+if (isDev()) {
     corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
 } else {
     corsOrigin = [`https://${process.env.DOMAIN}:${process.env.WEB_PORT}`]
@@ -60,7 +61,7 @@ async function init() {
         fetch: app.fetch,
         port: process.env.PORT || 3000,
     }
-    if (global.isDev) {
+    if (isDev()) {
         serverParams.createServer = createServer
         serverParams.serverOptions = {
             key: fs.readFileSync('../localhost+3-key.pem'),

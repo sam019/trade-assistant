@@ -5,7 +5,7 @@ import fs from 'fs'
 import orderWatcher from './orderMonitor.js'
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES } from '../../../share/const.js'
-import { checkSymbol, sleep } from '../../../share/utils.js'
+import { checkSymbol, sleep, isDev } from '../../../share/utils.js'
 import logger from '../logger.js'
 
 const exchangeModels = {}
@@ -23,7 +23,7 @@ class ExchangeModel {
                 // defaultType: 'future'
             },
         }
-        if (global.isDev) {
+        if (isDev()) {
             Object.assign(config, {
                 // verbose: true,
                 httpsProxy: process.env.HTTP_PROXY,

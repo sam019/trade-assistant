@@ -5,7 +5,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 // import { orderModel } from '../database/db.js'
 import service from '../service/index.js'
 import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
-import { checkSymbol } from '../../../share/utils.js'
+import { checkSymbol, isDev } from '../../../share/utils.js'
 import logger from '../logger.js'
 
 function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol, cSymbol }) {
@@ -75,7 +75,7 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
         // throw e;
-        if (global.isDev) {
+        if (isDev()) {
             throw e
         }
     }

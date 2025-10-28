@@ -20,3 +20,7 @@ export async function sleep(time = 0, signTime = 0) {
     // console.log('sleep', signTime ? time - (Date.now() - signTime) : time)
     return new Promise(res => setTimeout(() => res(), signTime ? time - (Date.now() - signTime) : time))
 }
+
+export function isDev() {
+    return process?.env ? process.env.NODE_DEV !== 'production' : import.meta.env.NODE_DEV  !== 'production'
+}

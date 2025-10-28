@@ -5,7 +5,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 // import { orderModel } from '../database/db.js'
 import service from '../service/index.js'
 import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
-import { checkSymbol, getPrecisionLength } from '../../../share/utils.js'
+import { checkSymbol, isDev } from '../../../share/utils.js'
 import logger from '../logger.js'
 
 function getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol }) {
@@ -89,7 +89,7 @@ export default async function checkSpotSLTPrder(order, ticker) {
         logger.sltpErr({ exchange, symbol, e })
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
-        if (global.isDev) {
+        if (isDev()) {
             throw e
         }
         // console.log('止盈止损订单出错, id:' + _id, e)
