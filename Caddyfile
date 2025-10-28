@@ -1,5 +1,0 @@
-rollingin.top {
-    root * /srv/www
-    encode
-    file_server
-}

@@ -1,0 +1,23 @@
+{
+    "compilerOptions": {
+        "module": "nodenext",
+        "outDir": "./dist",
+        // "rootDir": "./src",
+        // "noImplicitAny": true,
+        // "removeComments": true,
+        // "preserveConstEnums": true,
+        // "sourceMap": true
+        "allowJs": true,
+        "skipLibCheck": true
+    },
+    // "files": [
+    //     "src/app.js",
+    // ],
+    "include": [
+        "./",
+        "../share/"
+    ],
+    "exclude": [
+        "**/*/node_modules"
+    ],
+}

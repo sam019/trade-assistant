@@ -12,8 +12,9 @@
 node_modules/
 
 # env
-.env*
-
+.env*.local
+# pem
+*.pem
 # logs
 logs/
 *.log
