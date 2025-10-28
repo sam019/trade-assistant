@@ -8,6 +8,7 @@ secrets:
 services:
     mongo:
         image: mongo:latest
+        container_name: ta-mongo
         restart: unless-stopped
         ports:
             - 27017:27017
@@ -23,6 +24,7 @@ services:
             context: ./server
             additional_contexts:
                 - share=./share
+        container_name: ta-server
         restart: unless-stopped
         volumes:
             - ./logs:/App/server/logs
@@ -47,6 +49,7 @@ services:
                 - share=./share
             args:
                 - NPM_REGISTRY
+        container_name: ta-web
         restart: unless-stopped
         ports:
             - 80:80

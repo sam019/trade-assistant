@@ -23,7 +23,7 @@ log4js.configure({
 
 const _logger =log4js.getLogger()
 
-function getOperationName(symbol, side) {
+function getSLTPOperName(symbol, side) {
     const cSymbol = checkSymbol(symbol)
     if (cSymbol.isSpot) {
         return 'SELL'
@@ -32,6 +32,19 @@ function getOperationName(symbol, side) {
             return 'SELL SHORT'
         } else {
             return 'SELL LONG'
+        }
+    }
+}
+
+function getCondOperName(symbol, side) {
+    const cSymbol = checkSymbol(symbol)
+    if (cSymbol.isSpot) {
+        return 'BUY'
+    } else {
+        if (side === ORDER_SIDES.BUY) {
+            return 'BUY LONG'
+        } else {
+            return 'BUY SHORT'
         }
     }
 }
@@ -79,31 +92,20 @@ class Logger {
     }
 
     sltp({ exchange, symbol, isSL, side, triggerPrice, lastPrice, amount, unit }) {
-        _logger.info(`${isSL ? 'SL' : 'TP'} Order TRIGGERED on ${exchange}, ${symbol}, ${getOperationName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}, amount:${amount} unit:${unit}`)
+        _logger.info(`${isSL ? 'SL' : 'TP'} Order TRIGGERED on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}, amount:${amount} unit:${unit}`)
     }
     sltpSucc({ exchange, symbol, isSL, side, amount, unit, price }) {
-        _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getOperationName(symbol, side)}, amount:${amount} unit:${unit}, price:${price}`)
+        _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, amount:${amount} unit:${unit}, price:${price}`)
     }
     sltpErr({ exchange, symbol, e }) {
         _logger.trace(`SLTP Order FAILED on ${exchange}, ${symbol}`, e)
     }
 
     cond({ exchange, symbol, side, lastPrice, triggerPrice }) {
-        const cSymbol = checkSymbol(symbol)
-        let operationName
-        if (cSymbol.isSpot) {
-            operationName = 'BUY'
-        } else {
-            if (side === ORDER_SIDES.BUY) {
-                operationName = 'BUY LONG'
-            } else {
-                operationName = 'BUY SHORT'
-            }
-        }
-        _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${operationName}, last:${lastPrice}, trigger:${triggerPrice}`)
+        _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}`)
     }
     condSucc({ exchange, symbol, side, amount, price }) {
-        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getOperationName(symbol, side)}, amount:${amount}, price:${price}`)
+        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, amount:${amount}, price:${price}`)
     }
     condErr({ exchange, symbol, e }) {
         _logger.trace(`Condition Order FAILED on ${exchange}, ${symbol}`, e)
