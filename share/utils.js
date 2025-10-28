@@ -22,5 +22,5 @@ export async function sleep(time = 0, signTime = 0) {
 }
 
 export function isDev() {
-    return process?.env ? process.env.NODE_DEV !== 'production' : import.meta.env.NODE_DEV  !== 'production'
+    return process?.env ? process.env.NODE_ENV !== 'production' : import.meta.env.NODE_ENV  !== 'production'
 }

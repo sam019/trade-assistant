@@ -8,8 +8,6 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import './style.css'
 import App from './App.vue'
 
-window.isDev = import.meta.env.NODE_ENV !== 'production'
-
 // 解决报错 Unable to preventDefault inside passive event listener invocation
 if (typeof EventTarget !== "undefined") {
     let func = EventTarget.prototype.addEventListener

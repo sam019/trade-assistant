@@ -61,5 +61,4 @@ services:
             - server
 volumes:
     data_db:
-    web_dist:
     Caddy_data:

@@ -7,7 +7,7 @@ import { ElLoading } from 'element-plus'
 import Decimal from 'decimal.js'
 
 import { MARKET_TYPES, ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, MARGIN_MODES, POSITION_SIDES, STABLE_COINS } from '../../share/const'
-import { checkSymbol } from '../../share/utils'
+import { checkSymbol, isDev } from '../../share/utils'
 
 import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
@@ -82,7 +82,7 @@ export default {
                 }
                 this.showLogin = false
             } catch (e) {
-                if (window.isDev) {
+                if (isDev()) {
                     this.$message.error(e.message)
                 }
                 this.showLogin = true
@@ -95,7 +95,7 @@ export default {
                 this.showLogin = false
                 this.init()
             } catch (e) {
-                if (window.isDev) {
+                if (isDev()) {
                     console.log(e)
                     this.$message.error({
                         message: JSON.stringify(e),
