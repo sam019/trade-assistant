@@ -26,9 +26,9 @@ const favouriteMarketsModel = mongoose.model('favoriteMarkets', favoriteMarkets)
 
 /* 连接数据库 */
 const connectDB = async () => {
+    const dbHost = global.isDev ? 'localhost' : 'mongo'
     try {
-        await mongoose.connect('mongodb://localhost:27017/trade-assistant', {})
-
+        await mongoose.connect(`mongodb://${dbHost}:27017/trade-assistant`, {})
         console.log('MongoDB connected successfully')
     } catch (err) {
         console.error('MongoDB connection error:', err)

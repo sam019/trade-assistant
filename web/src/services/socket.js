@@ -1,5 +1,5 @@
 import { io } from "socket.io-client"
-import { apiURL } from '../config'
+import { wsURL } from '../config'
 
 // const socket = io(apiURL);
 
@@ -32,7 +32,9 @@ class Socket {
             res = _res
             rej = _rej
         })
-        this.socket = io(apiURL, {
+        // console.log('connect apiURL: ', apiURL)
+        this.socket = io(wsURL, {
+            reconnectionDelayMax: 5000,
             withCredentials: true,
             // transports: ['websocket'],
         })

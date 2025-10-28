@@ -1,18 +1,18 @@
-FROM node:current
+FROM node:25-alpine
 
-WORKDIR /APP
+WORKDIR /app
+COPY ./package.json ./pnpm-lock.yaml ./server/
 
-COPY ./package.json ./pnpm-lock.json server/
-
-WORKDIR /APP/server
-RUN npm install pnpm
-RUN pnpm install
+WORKDIR /app/server
+RUN npm install -g pnpm && pnpm install
 
 COPY . .
-WORKDIR /APP
+WORKDIR /app
 COPY --from=share . ./share/
 
+ENV NODE_ENV=production
 
-EXPOSE 3000
+EXPOSE $PORT
 
-CMD [ "node server/src/app.js" ]
+WORKDIR /app/server
+CMD ["node", "src/app.js"]

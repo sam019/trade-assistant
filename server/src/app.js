@@ -19,7 +19,13 @@ import socketHandler from "./api/socketHandler.js"
 
 
 global.isDev = process.env.NODE_ENV !== 'production'
-const corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
+
+let corsOrigin
+if (global.isDev) {
+    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
+} else {
+    corsOrigin = [`https://${process.env.DOMAIN}:${process.env.WEB_PORT}`]
+}
 
 async function init() {
     await connectDB()
@@ -52,7 +58,7 @@ async function init() {
     // })
     const serverParams = {
         fetch: app.fetch,
-        port: 3000,
+        port: process.env.PORT || 3000,
     }
     if (global.isDev) {
         serverParams.createServer = createServer

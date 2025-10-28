@@ -1,4 +1,10 @@
-# secrets:
+secrets:
+    PASSWORD:
+        environment: PASSWORD
+    API_KEY_BINANCE:
+        environment: API_KEY_BINANCE
+    SECRET_KEY_BINANCE:
+        environment: SECRET_KEY_BINANCE
 services:
     mongo:
         image: mongo:latest
@@ -11,14 +17,29 @@ services:
         volumes:
             # - c:/Program Files/MongoDB/server/8.2/bin/data:/data/db
             - data_db:/data/db
-        command: --oplogSize 192 --replSet rs0
-    
+        command: --oplogSize 192 --replSet rs0 --bind_ip_all
     server:
         build:
             context: ./server
             additional_contexts:
                 - share=./share
         restart: unless-stopped
+        volumes:
+            - ./logs:/App/server/logs
+        # ports:
+        #     - 8080:8080
+        environment:
+            # - NODE_ENV=production
+            - TESTNET=true
+            - PORT=8080
+            - WEB_PORT=443
+            - DOMAIN="rollingin.top"
+        secrets:
+            - PASSWORD
+            - API_KEY_BINANCE
+            - SECRET_KEY_BINANCE
+        depends_on:
+            - mongo
     web:
         build: 
             context: ./web
@@ -26,20 +47,15 @@ services:
                 - share=./share
             args:
                 - NPM_REGISTRY
-        volumes:
-            - web_dist:/App/web/dist
-        # environment:
-    caddy:
-        image: caddy:latest
         restart: unless-stopped
         ports:
             - 80:80
             - 443:443
         volumes:
-            - ./Caddyfile:/etc/caddy
+            - ./caddy:/etc/caddy
             - Caddy_data:/data
-            - web_dist:/srv/www
-        
+        depends_on:
+            - server
 volumes:
     data_db:
     web_dist:

@@ -1,5 +1,6 @@
 import * as ccxt from 'ccxt'
 import _ from 'lodash-es'
+import fs from 'fs'
 
 import orderWatcher from './orderMonitor.js'
 import { SUPPORTED_EXCHANGES } from '../config.js'
@@ -12,19 +13,17 @@ const exchangeModels = {}
 class ExchangeModel {
     constructor(exchange) {
         // console.log('process.env.NODE_ENV', process.env.NODE_ENV)
-        this._test = process.env.TESTNET
+        this.TESTNET = !!process.env.TESTNET
         this.fetchInterval = 1000
         this.errRestTime = 5000
 
         const config = {
             enableRateLimit: true,
-            apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
-            secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
             options: {
                 // defaultType: 'future'
             },
         }
-        if (this._test) {
+        if (global.isDev) {
             Object.assign(config, {
                 // verbose: true,
                 httpsProxy: process.env.HTTP_PROXY,
@@ -32,10 +31,15 @@ class ExchangeModel {
                 apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
                 secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
             })
+        } else {
+            Object.assign(config, {
+                apiKey: fs.readFileSync(`/run/secrets/API_KEY_${exchange.toUpperCase()}`),
+                secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`),
+            })
         }
         // console.log(process.env[`SECRET_KEY_${exchange.toUpperCase()}`])
         this.exchange = new ccxt.pro[exchange](config)
-        if (this._test) {
+        if (this.TESTNET) {
             // this.exchange.setSandboxMode(true)
             this.exchange.enableDemoTrading(true)
         }
@@ -160,7 +164,7 @@ class ExchangeModel {
     }
 
     async watchBalance(type = 'spot', subType = undefined) {
-        // const method = this._test ? 'fetchBalance' : 'startWatchBalance'
+        // const method = this.TESTNET ? 'fetchBalance' : 'startWatchBalance'
         // const method = 'watchBalance'
         // const method = 'fetchBalanceWs'
         const method = 'fetchBalance'
@@ -201,7 +205,7 @@ class ExchangeModel {
                 this._triggerAccountCbs('positions')
                 // console.log('watch pos sleep', sign)
                 await sleep(this.fetchInterval, sign)
-                // if (this._test) {
+                // if (this.TESTNET) {
                 //     await sleep(this.fetchInterval, sign)
                 // }
             } catch (e) {
@@ -218,7 +222,7 @@ class ExchangeModel {
     }
 
     async watchPositions(symbols = []) {
-        // const method = this._test ? 'fetchPositions' : 'watchPositions'
+        // const method = this.TESTNET ? 'fetchPositions' : 'watchPositions'
         const method = 'fetchPositions'
         const linearSymbols = []
         const inverseSymbols = []
@@ -339,7 +343,7 @@ class ExchangeModel {
         }
     }
     async watchTickers(symbols) {
-        // const method = this._test ? 'fetchTickers' : 'watchTickers'
+        // const method = this.TESTNET ? 'fetchTickers' : 'watchTickers'
         const method = 'fetchTickers'
         // console.log('check tickers for: ', symbols)
         const symbolsNeedWatch = {

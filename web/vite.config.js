@@ -20,7 +20,7 @@ export default defineConfig({
         }),
         // basicSsl(),
     ],
-    server: {
+    server: process.env.NODE_DEV === 'production' && {
         host: '0.0.0.0',
         https: {
             key: fs.readFileSync('../localhost+3-key.pem'),

@@ -1,21 +1,19 @@
-FROM node:22-alpine
+FROM node:25-alpine as build-stage
 
-WORKDIR /APP
-
-# 基于此Dockerfile的镜像构建在项目根目录进行，以便使用share目录下的文件
+WORKDIR /app
 COPY ./package.json ./pnpm-lock.yaml ./web/
 
-WORKDIR /APP/web
-# ARG NPM_REGISTRY=https://registry.npmmirror.com
-# RUN echo "npm registry: $NPM_REGISTRY"
-# RUN npm config set registry https://registry.npm.taobao.org
-RUN npm config set strict-ssl false
-RUN npm install -g pnpm --registry=https://registry.npmmirror.com
-RUN pnpm install --registry=https://registry.npmmirror.com
+WORKDIR /app/web
+RUN npm install -g pnpm && pnpm install
 
 COPY . .
-WORKDIR /APP
+WORKDIR /app
 COPY --from=share . ./share/
 
-WORKDIR /APP/web
+ENV NODE_ENV=production
+
+WORKDIR /app/web
 RUN npm run build
+
+FROM caddy:2-alpine
+COPY --from=build-stage /app/web/dist /srv/www

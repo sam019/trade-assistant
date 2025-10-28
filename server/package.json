@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx --env-file=.env --watch src/app.js",
-    "build": "tsc --env-file=.env.production",
+    "build": "tsc src/app.js",
     "build-testnet": "tsc --env-file=.env.production.test",
     "start": "node dist/index.js --env-file=.env",
     "mongo": "mongod --config=\"c:/Program Files/MongoDB/server/8.2/bin/mongod.cfg\" && mongoose && rs.initiate()"

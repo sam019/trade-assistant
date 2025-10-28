@@ -1,0 +1,12 @@
+rollingin.top {
+    root * /srv/www
+    encode
+    file_server
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy server:8080
+    }
+    handle /socket.io/* {
+        reverse_proxy server:8080
+    }
+}

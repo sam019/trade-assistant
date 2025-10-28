@@ -4,6 +4,7 @@ import {
     setCookie,
     getCookie,
 } from 'hono/cookie'
+import fs from 'fs'
 
 const hash = crypto.createHash('sha256')
 const cookieKey = 'test'
@@ -12,10 +13,11 @@ const noAuthText = 'Hellow World'
 class Auth {
     
     constructor() {
-        if(!process.env.PASSWORD) {
+        const pwd = global.isDev ? process.env.PASSWORD : fs.readFileSync('/run/secrets/PASSWORD')
+        if(!pwd) {
             throw new Error('Password must exist')
         }
-        this.pwdHash = hash.update(process.env.PASSWORD).digest('hex')
+        this.pwdHash = hash.update(pwd).digest('hex')
     }
     verify(pwd) {
         return pwd === this.pwdHash
