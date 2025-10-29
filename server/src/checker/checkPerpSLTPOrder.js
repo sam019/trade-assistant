@@ -87,7 +87,7 @@ export default async function checPerpSLTPOrder(order, position) {
             } else {
                 result = await service.createInversePerpMarketOrder(params)
             }
-            logger.sltpSucc({ exchange, symbol, isSL: true, side: params.side, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT, price: result.price })
+            logger.sltpSucc({ exchange, symbol, isSL: true, side: params.side, cost: result.cost, price: result.price })
             // console.log(`仓位止损结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)
@@ -107,7 +107,7 @@ export default async function checPerpSLTPOrder(order, position) {
             } else {
                 result = await service.createInversePerpMarketOrder(params)
             }
-            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT, price: result.price })
+            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, cost: result.cost, price: result.price })
             // console.log(`仓位止盈结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
             await orderWatcher.resolveOrder(_id)

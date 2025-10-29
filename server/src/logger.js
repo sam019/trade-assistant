@@ -1,7 +1,8 @@
 import log4js from 'log4js'
-
+import _ from 'lodash-es'
 import { ORDER_SIDES } from '../../share/const.js'
 import { checkSymbol } from '../../share/utils.js'
+import bot from './bot.js'
 
 // 配置日志记录器
 log4js.configure({
@@ -23,45 +24,53 @@ log4js.configure({
 
 const _logger =log4js.getLogger()
 
-function getSLTPOperName(symbol, side) {
+function getSLTPOperName(symbol, side, isZh = false) {
     const cSymbol = checkSymbol(symbol)
     if (cSymbol.isSpot) {
-        return 'SELL'
+        return !isZh ? 'SELL' : '卖出'
     } else {
         if (side === ORDER_SIDES.BUY) {
-            return 'SELL SHORT'
+            return !isZh ? 'SELL SHORT' : '卖空'
         } else {
-            return 'SELL LONG'
+            return !isZh ? 'SELL LONG' : '卖多'
         }
     }
 }
 
-function getCondOperName(symbol, side) {
+function getCondOperName(symbol, side, isZh = false) {
     const cSymbol = checkSymbol(symbol)
     if (cSymbol.isSpot) {
-        return 'BUY'
+        return !isZh ? 'BUY' : '买入'
     } else {
         if (side === ORDER_SIDES.BUY) {
-            return 'BUY LONG'
+            return !isZh ? 'BUY LONG' : '做多'
         } else {
-            return 'BUY SHORT'
+            return !isZh ? 'BUY SHORT' : '做空'
         }
     }
 }
 
-const TICKER_SUSPENPOSITIOND_TIME = 5 * 1000
-const POSITION_SUSPEND_TIME = 5 * 1000
+const TICKER_SUSPENPOSITIOND_TIME = 10 * 1000
+const POSITION_SUSPEND_TIME = 10 * 1000
 
 class Logger {
     order(amount) {
         _logger.info(`Orders changed, amount:${amount}`)
     }
 
+    _lastUpdateTime = {}
+    getLastUpdateTime() {
+        // console.log('getLastUpdateTime', this._lastUpdateTime)
+        return this._lastUpdateTime
+    }
+
+    // _lastTickerTime = {}
     _tickerReceiveTimeout = {}
     _receiveTickerTimout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Tickers SUSPEND receive from ${exchange}`)
             this._tickerReceiveTimeout[exchange] = null
+            _.set(this._lastUpdateTime, [exchange, 'ticker'], null)
         }, TICKER_SUSPENPOSITIOND_TIME)
     }
     ticker({ exchange }) {
@@ -73,13 +82,17 @@ class Logger {
             clearTimeout(this._tickerReceiveTimeout[exchange])
         }
         this._tickerReceiveTimeout[exchange] = this._receiveTickerTimout(exchange)
+        _.set(this._lastUpdateTime, [exchange, 'ticker'], Date.now())
+        // this._lastUpdateTime[exchange] = Date.now()
     }
 
+    // _lastPositinTime = {}
     _positionReceiveTimout = {}
     _receivePositionTimeout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Positions SUSPEND receive from ${exchange}`)
             this._positionReceiveTimout[exchange] = null
+            _.set(this._lastUpdateTime, [exchange, 'position'], null)
         }, POSITION_SUSPEND_TIME)
     }
     position({ exchange }) {
@@ -89,26 +102,32 @@ class Logger {
             clearTimeout(this._positionReceiveTimout[exchange])
         }
         this._positionReceiveTimout[exchange] = this._receivePositionTimeout(exchange)
+        // this._lastPositinTime[exchange] = Date.now()
+        _.set(this._lastUpdateTime, [exchange, 'position'], Date.now())
     }
 
     sltp({ exchange, symbol, isSL, side, triggerPrice, lastPrice, amount, unit }) {
         _logger.info(`${isSL ? 'SL' : 'TP'} Order TRIGGERED on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}, amount:${amount} unit:${unit}`)
     }
-    sltpSucc({ exchange, symbol, isSL, side, amount, unit, price }) {
-        _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, amount:${amount} unit:${unit}, price:${price}`)
+    sltpSucc({ exchange, symbol, isSL, side, cost, price }) {
+        _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, volume:${cost}, price:${price}`)
+        bot.pushMessage(`${isSL ? '止损' : '止盈'} 成功\n${exchange} ${symbol}\n${getSLTPOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
     }
     sltpErr({ exchange, symbol, e }) {
         _logger.trace(`SLTP Order FAILED on ${exchange}, ${symbol}`, e)
+        bot.pushMessage(`止盈止损 失败\n${exchange} ${symbol}\n${e.message}`)
     }
 
     cond({ exchange, symbol, side, lastPrice, triggerPrice }) {
         _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}`)
     }
-    condSucc({ exchange, symbol, side, amount, price }) {
-        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, amount:${amount}, price:${price}`)
+    condSucc({ exchange, symbol, side, cost, price }) {
+        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, volume:${cost}, price:${price}`)
+        bot.pushMessage(`条件委托 成功\n${exchange}, ${symbol}\n${getCondOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
     }
     condErr({ exchange, symbol, e }) {
         _logger.error(`Condition Order FAILED on ${exchange}, ${symbol}`, e)
+        bot.pushMessage(`条件委托 失败\n${exchange} ${symbol}\n${e.message}`)
     }
 }
 

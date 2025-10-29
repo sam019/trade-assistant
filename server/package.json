@@ -2,7 +2,7 @@
   "name": "server",
   "type": "module",
   "scripts": {
-    "dev": " TZ=Asia/Shanghai tsx --env-file=.env.local --watch src/app.js",
+    "dev": "tsx --env-file=.env.local --watch src/app.js",
     "build": "tsc src/app.js",
     "build-testnet": "tsc --env-file=.env.production.test",
     "start": "node dist/index.js --env-file=.env",
@@ -16,10 +16,12 @@
     "lodash-es": "^4.17.21",
     "log4js": "^6.9.1",
     "mongoose": "^8.18.3",
+    "node-telegram-bot-api": "^0.66.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "@types/node-telegram-bot-api": "^0.64.12",
     "tsx": "^4.7.1",
     "typescript": "^5.9.3"
   }

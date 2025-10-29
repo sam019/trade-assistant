@@ -65,7 +65,7 @@ export default async function checkSpotSLTPrder(order, ticker) {
             logger.sltp({ exchange, symbol, isSL: true, side: params.side, lastPrice, triggerPrice: slPrice, amount: params.amount, unit: params.unit })
             const result = await service.createSpotMarketOrder(params)
             // console.log(`止损订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 卖出数量:${result.filled}${cSymbol.base}`)
-            logger.sltpSucc({ exchange, symbol, isSL: true, side:params.side, amount: result.filled, unit: cSymbol.base, price: result.price })
+            logger.sltpSucc({ exchange, symbol, isSL: true, side:params.side, cost: result.cost, price: result.price })
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         } else if (tpPrice && lastPrice >= tpPrice) {
@@ -81,7 +81,7 @@ export default async function checkSpotSLTPrder(order, ticker) {
             }
             logger.sltp({ exchange, symbol, isSL: false, side: params.side, lastPrice, triggerPrice: tpPrice, amount: params.amount, unit: params.unit })
             const result = await service.createSpotMarketOrder(params)
-            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, amount: result.filled, unit: cSymbol.base, price: result.price })
+            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, cost: result.cost, price: result.price })
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }

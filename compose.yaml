@@ -1,6 +1,10 @@
 secrets:
-    PASSWORD:
+    PASSWORD: #登陆密码
         environment: PASSWORD
+    BOT_TOKEN: #tg机器人token
+        environment: BOT_TOKEN
+    CHAT_ID: #tg我的chat_id
+        environment: CHAT_ID
     API_KEY_BINANCE:
         environment: API_KEY_BINANCE
     SECRET_KEY_BINANCE:
@@ -38,6 +42,8 @@ services:
             - DOMAIN="rollingin.top"
         secrets:
             - PASSWORD
+            - BOT_TOKEN
+            - CHAT_ID
             - API_KEY_BINANCE
             - SECRET_KEY_BINANCE
         depends_on:

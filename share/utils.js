@@ -23,5 +23,15 @@ export async function sleep(time = 0, signTime = 0) {
 }
 
 export function isDev() {
-    return process?.env ? process.env.NODE_ENV !== 'production' : import.meta.env.NODE_ENV  !== 'production'
+    if (typeof global !== 'undefined') {
+        return process.env.NODE_ENV !== 'production'
+    }
+    return import.meta.env.NODE_ENV  !== 'production'
+}
+
+export function formatTimestamp(timestamp) {
+    const d = new Date(timestamp)
+    const date = d.toISOString().split('T')[0];
+    const time = d.toTimeString().split(' ')[0].replace(/:/g, '-');
+    return `${date} ${time}`
 }
