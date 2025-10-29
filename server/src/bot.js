@@ -9,8 +9,8 @@ if (isDev()) {
     token = process.env.BOT_TOKEN
     myChatId = process.env.CHAT_ID
 } else {
-    token = fs.readFileSync('/run/secrets/BOT_TOKEN', 'uft-8').trim()
-    myChatId = fs.readFileSync('/run/secrets/CHAT_ID', 'uft-8').trim()
+    token = fs.readFileSync('/run/secrets/BOT_TOKEN', 'utf8').trim()
+    myChatId = fs.readFileSync('/run/secrets/CHAT_ID', 'utf8').trim()
 }
 
 // console.log('BOT_TOKEN', token)
