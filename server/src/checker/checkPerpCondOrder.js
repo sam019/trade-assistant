@@ -50,6 +50,7 @@ export default async function checkPerpCondOrder(order, ticker) {
     // console.log('checkLinearPerpOrder', order.symbol, order.slPrice, order.tpPrice)
     const { _id, symbol, side, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice, leverage } = order
     try {
+        // throw new Error('test')
         if (orderWatcher.isOrderDealing(_id)) {
             return
         }
@@ -95,8 +96,8 @@ export default async function checkPerpCondOrder(order, ticker) {
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        logger.condErr({ exchange, symbol, e })
         // console.log('条件委托出错, id:' + _id, e)
+        logger.condErr({ exchange, symbol, e })
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
         if (isDev()) {

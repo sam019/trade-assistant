@@ -18,7 +18,8 @@ export function checkSymbol(symbol) {
 
 export async function sleep(time = 0, signTime = 0) {
     // console.log('sleep', signTime ? time - (Date.now() - signTime) : time)
-    return new Promise(res => setTimeout(() => res(), signTime ? time - (Date.now() - signTime) : time))
+    const realTime = signTime ? time - (Date.now() - signTime) : time
+    return new Promise(res => setTimeout(() => res(), realTime < 0 ? 0 : realTime))
 }
 
 export function isDev() {

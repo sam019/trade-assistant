@@ -174,9 +174,9 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
         return
     }
 
-    console.log('创建市价单', exchange, symbol, params.quantity, realLeverage)
+    console.log('创建U本位市价单', exchange, symbol, `${params.quantity}(contract)`, `leverage: ${realLeverage}`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    console.log('下单成功', result.amount, result.cost, leverage)
+    console.log('下单成功', result.filled, result.cost)
     await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
     if (withSLTP) {
         sltpParams.amount = result.amount

@@ -2,7 +2,7 @@
   "name": "server",
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env.local --watch src/app.js",
+    "dev": " TZ=Asia/Shanghai tsx --env-file=.env.local --watch src/app.js",
     "build": "tsc src/app.js",
     "build-testnet": "tsc --env-file=.env.production.test",
     "start": "node dist/index.js --env-file=.env",

@@ -10,7 +10,7 @@ COPY . .
 WORKDIR /app
 COPY --from=share . ./share/
 
-ENV NODE_ENV=production
+ENV NODE_ENV=production TZ='Asia/Shanghai'
 
 EXPOSE $PORT
 

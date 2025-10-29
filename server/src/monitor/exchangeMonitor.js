@@ -33,11 +33,11 @@ class ExchangeModel {
             })
         } else {
             Object.assign(config, {
-                apiKey: fs.readFileSync(`/run/secrets/API_KEY_${exchange.toUpperCase()}`),
-                secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`),
+                apiKey: fs.readFileSync(`/run/secrets/API_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
+                secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
             })
         }
-        // console.log(process.env[`SECRET_KEY_${exchange.toUpperCase()}`])
+        // console.log('config', config)
         this.exchange = new ccxt.pro[exchange](config)
         if (this.TESTNET) {
             // this.exchange.setSandboxMode(true)
@@ -157,7 +157,7 @@ class ExchangeModel {
                 }
                 await sleep(this.fetchInterval, sign)
             } catch (e) {
-                logger.error('startWatchBalance error: ', e.message)
+                logger.error('WatchBalance error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }
@@ -194,7 +194,7 @@ class ExchangeModel {
                 this.positions.forEach(pos => {
                     pos.leverage = this.leverages[pos.symbol]
                 })
-                // console.log('startWatchPositions', this.positions)
+                // console.log('WatchPositions', this.positions)
                 this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
                     const r = this.positions.filter(pos => symbols.includes(pos.symbol))
                     // console.log('awaitPositionsUpdateCb', symbols, r)
@@ -215,7 +215,7 @@ class ExchangeModel {
                     this.awaitPositionsUpdateCb.delete(cb)
                 })
                 // throw e;
-                logger.error('startWatchPositions error: ', e.message)
+                logger.error('WatchPositions error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }
@@ -337,7 +337,7 @@ class ExchangeModel {
                 //     console.log(this.exchange.id, 'watchTickers failed with:', e.message)
                 //     // retry or whatever
                 // }
-                logger.error('startWatchTickers error: ', e.message)
+                logger.error('WatchTickers error: ', e.message)
                 await sleep(this.errRestTime)
             }
         }

@@ -108,12 +108,32 @@ class Logger {
         _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, amount:${amount}, price:${price}`)
     }
     condErr({ exchange, symbol, e }) {
-        _logger.trace(`Condition Order FAILED on ${exchange}, ${symbol}`, e)
+        _logger.error(`Condition Order FAILED on ${exchange}, ${symbol}`, e)
     }
 }
 
-export default new Proxy(new Logger, {
+// export default new Proxy(new Logger(), (() => {
+//     const funcMap = new Map()
+//     return {
+//         get(t, p) {
+//             if (t[p]) {
+//                 return t[p]
+//             }
+//             if (!funcMap.has(p)) {
+//                 funcMap.set(p, _logger[p] && _logger[p].bind(_logger))
+//             }
+//             return funcMap.get(p)
+//         },
+//     }
+// })())
+
+const logger = new Proxy(new Logger(), {
     get(t, p) {
         return t[p] || _logger[p]
     },
 })
+
+// const logger = new Logger()
+// Object.setPrototypeOf(logger, _logger)
+// console.log('logger', logger.order, logger.trace)
+export default logger

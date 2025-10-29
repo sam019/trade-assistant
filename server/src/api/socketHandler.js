@@ -39,7 +39,7 @@ export default function socketHandler(socket) {
         if (unsubscribeAccount) {
             unsubscribeAccount()
         }
-        // console.log(`Client subscribed to account updates for exchange: ${data.exchange}`)
+        console.log(`Client subscribed to account updates for exchange: ${data.exchange}`)
         const exchangeMonitor = getExchangeMonitor(data.exchange)
         if (exchangeMonitor) {
             // 向交易所订阅账户更新
@@ -61,7 +61,7 @@ export default function socketHandler(socket) {
     socket.on('subscribeTickers', (data) => {
         const  unsubscribeTickers = subscribtionManager.get(data.exchange, 'unsubscribeTickers')
         if (unsubscribeTickers) {
-            // console.log(`Already subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`);
+            console.log(`Already subscribed to tickers updates for exchange: ${data.exchange}, symbols: ${data.symbols}`);
             unsubscribeTickers()
             subscribtionManager.set(data.exchange, 'unsubscribeTickers', null)
         }

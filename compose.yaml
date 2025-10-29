@@ -25,11 +25,11 @@ services:
             additional_contexts:
                 - share=./share
         container_name: ta-server
-        restart: unless-stopped
+        # restart: unless-stopped
         volumes:
-            - ./logs:/App/server/logs
-        # ports:
-        #     - 8080:8080
+            - ./logs/:/App/server/logs/
+        ports:
+            - 8080:8080
         environment:
             # - NODE_ENV=production
             - TESTNET=true
