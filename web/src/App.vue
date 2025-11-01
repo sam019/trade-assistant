@@ -82,9 +82,10 @@ export default {
                 }
                 this.showLogin = false
             } catch (e) {
-                if (isDev()) {
-                    this.$message.error(e.message)
-                }
+                // if (isDev()) {
+                //     this.$message.error(e.message)
+                // }
+                console.log(e)
                 this.showLogin = true
             }
         },
@@ -95,13 +96,14 @@ export default {
                 this.showLogin = false
                 this.init()
             } catch (e) {
-                if (isDev()) {
-                    console.log(e)
-                    this.$message.error({
-                        message: JSON.stringify(e),
-                        duration: 0
-                    })
-                }
+                console.log(e)
+                // if (isDev()) {
+                //     console.log(e)
+                //     this.$message.error({
+                //         message: JSON.stringify(e),
+                //         duration: 0
+                //     })
+                // }
             }
         },
         async initExchangeData(exchange) {
@@ -110,6 +112,7 @@ export default {
 
             socket.subscribeAccount(exchange, (data) => {
                 // console.log('accountUpdate', data)
+                // this.$message({ message: `subscribeAccount ${JSON.stringify(data)}` })
                 Object.keys(data).forEach(k => this.exchangeAccount[k] = data[k]) // 避免触发太多次account watch
             })
             const setDefaultMarket = () => service
@@ -196,10 +199,10 @@ export default {
                 }
             } catch (e) {
                 console.error(e)
-                this.$message({
-                    message: e.message,
-                    type: 'error',
-                })
+                // this.$message({
+                //     message: e.message,
+                //     type: 'error',
+                // })
             }
         },
         async handleMarginModeChange(mode) {
@@ -213,10 +216,10 @@ export default {
                 })
             } catch (e) {
                 console.error(e)
-                this.$message({
-                    message: e?.response?.data?.name,
-                    type: 'error',
-                })
+                // this.$message({
+                //     message: e?.response?.data?.name,
+                //     type: 'error',
+                // })
             }
         },
         async handleLeverageChange(leverage) {
@@ -230,10 +233,10 @@ export default {
                 })
             } catch (e) {
                 console.error(e)
-                this.$message({
-                    message: e?.response?.data?.name,
-                    type: 'error',
-                })
+                // this.$message({
+                //     message: e?.response?.data?.name,
+                //     type: 'error',
+                // })
             }
         },
         // 前端不需要做精确校验
@@ -300,10 +303,10 @@ export default {
                 this.resetForm(true)
             } catch (e) {
                 console.log(e)
-                this.$message({
-                    message: e.response.data,
-                    type: 'error',
-                })
+                // this.$message({
+                //     message: e.response.data,
+                //     type: 'error',
+                // })
             } finally {
                 loading.close()
             }
@@ -346,10 +349,10 @@ export default {
                 })
             } catch (e) {
                 console.log(e)
-                this.$message({
-                    message: e.message,
-                    type: 'error',
-                })
+                // this.$message({
+                //     message: e.message,
+                //     type: 'error',
+                // })
             }
         },
         isSideDisabled(side) {
@@ -568,6 +571,7 @@ export default {
                 }
                 return b.evaluateValue[this.marketType] - a.evaluateValue[this.marketType]
             })
+            // this.$message({ message: `balances ${JSON.stringify(balances)}` })
             return balances
         },
         symbolsNeedTicker() {
@@ -578,6 +582,7 @@ export default {
                 }
                 symbols.push(`${balance.currency}/${STABLE_COINS.USDT}`)
             })
+            // this.$message({ message: `symbolsNeedTicker ${JSON.stringify(this.balances)}` })
             this.market?.symbol && symbols.push(this.market.symbol)
             symbols.sort() // 排序方便比较
             return symbols
@@ -884,20 +889,20 @@ export default {
         <!-- 条件委托触发价格 -->
         <div v-show="orderType === ORDER_TYPES.CONDITION"
             style="display: flex; flex-direction: column; padding: 0 10px;">
-            <el-input v-model="triggerPrice" type="number" clearable :controls="false" :min="0"
+            <el-input v-model="triggerPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
                 :placeholder="`触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
         </div>
         <!-- 止盈止损触发价格 -->
         <div v-show="orderType === ORDER_TYPES.SLTP" style="display: flex; flex-direction: column; padding: 0 10px;">
-            <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
+            <el-input v-model="tpPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
                 :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
-            <el-input v-model="slPrice" type="number" clearable :controls="false" :min="0"
+            <el-input v-model="slPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
                 :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`"
                 style="width: 100%; margin-top: 5px;"></el-input>
         </div>
         <!-- 下单仓位数量 -->
         <div style="position: relative; padding: 10px 10px;">
-            <el-input type="number" clearable v-model="orderAmount" @change="handleAmountChange"
+            <el-input type="number" inputmode="numeric" clearable v-model="orderAmount" @change="handleAmountChange"
                 @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : '数量(保证金)'"
                 :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
                 <template #prefix>
@@ -935,11 +940,11 @@ export default {
         <!-- 下单附带止盈止损设置 -->
         <div v-show="orderWithSLTP" style="padding: 0 10px;">
             <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                <el-input v-model="tpPrice" type="number" clearable :controls="false" :min="0"
+                <el-input v-model="tpPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
                     :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
             </div>
             <div style="display: flex; align-items: center;">
-                <el-input v-model="slPrice" type="number" clearable :controls="false" :min="0"
+                <el-input v-model="slPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
                     :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
             </div>
         </div>

@@ -31,10 +31,13 @@ class SubscribtionManager {
 
 // websocket处理
 export default function socketHandler(socket) {
+    const createTime = Date.now()
+    // const userAgent = socket.handshake.headers['user-agent']
+    // console.log('userAgent', userAgent)
     // 对每个socket连接，维护一个订阅管理器
     const subscribtionManager = new SubscribtionManager()
 
-    socket.on('subscribeAccount', (data, cb) => {
+    socket.on('subscribeAccount', (data) => {
         const unsubscribeAccount = subscribtionManager.get(data?.exchange, 'unsubscribeAccount')
         if (unsubscribeAccount) {
             unsubscribeAccount()
@@ -85,6 +88,7 @@ export default function socketHandler(socket) {
     })
     socket.on('disconnect', () => {
         subscribtionManager.unsubscribeAll()
-        // console.log('Client disconnected, cleaning up subscriptions')
+        // console.log('createTime', createTime)
+        console.log(`Client ${socket.id} disconnected, cleaning up subscriptions, connect duration ${(Date.now() - createTime) / 1000}s`)
     })
 }

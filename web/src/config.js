@@ -9,6 +9,7 @@ if (import.meta.env.PROD) {
     _apiURL = location.protocol + '//' + location.hostname + ':' + import.meta.env.VITE_API_PORT
     _wsURL = _apiURL
 }
+// alert('config apiURL: ' + _apiURL + _wsURL)
 // console.log('config apiURL: ', _apiURL, _wsURL)
 export const apiURL = _apiURL
 export const wsURL = _wsURL

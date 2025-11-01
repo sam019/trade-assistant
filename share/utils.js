@@ -31,7 +31,23 @@ export function isDev() {
 
 export function formatTimestamp(timestamp) {
     const d = new Date(timestamp)
-    const date = d.toISOString().split('T')[0];
-    const time = d.toTimeString().split(' ')[0].replace(/:/g, '-');
+    const date = d.toISOString().split('T')[0]
+    const time = d.toTimeString().split(' ')[0].replace(/:/g, '-')
     return `${date} ${time}`
+}
+
+// export function isMobileDevice() {
+//     const userAgentInfo = navigator.userAgent
+//     // console.log(userAgentInfo)
+//     const mobileKeywords = ["Mobi", "Android", "iPhone", "iPad", "iPod", "Windows Phone"]
+//     for (let i = 0; i < mobileKeywords.length; i++) {
+//         if (userAgentInfo.indexOf(mobileKeywords[i]) > -1) {
+//             return true
+//         }
+//     }
+//     return false
+// }
+
+export function isMobileDevice() {
+    return location.hostname !== 'localhost'
 }

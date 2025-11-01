@@ -22,6 +22,7 @@ import { isDev } from "../../share/utils.js"
 
 
 let corsOrigin
+// console.log('isDev', isDev())
 if (isDev()) {
     corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
 } else {
@@ -42,6 +43,7 @@ async function init() {
             return ''
         },
         credentials: true,
+        maxAge: 3600,
     })).use('*', httpAuth)
         .get("/", (c) => {
             return c.text("Hello Hono!")
@@ -79,6 +81,7 @@ async function init() {
         cors: {
             origin: corsOrigin,
             credentials: true,
+            maxAge: 3600, // 加了这个ios26的safari才能通过cors校验，原因未知
         },
     })
     io.use(ioAuth)

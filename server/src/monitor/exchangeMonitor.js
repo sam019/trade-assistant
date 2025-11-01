@@ -26,11 +26,16 @@ class ExchangeModel {
         if (isDev()) {
             Object.assign(config, {
                 // verbose: true,
-                httpsProxy: process.env.HTTP_PROXY,
-                wssProxy: process.env.WS_PROXY,
                 apiKey: process.env[`API_KEY_${exchange.toUpperCase()}`] || '',
                 secret: process.env[`SECRET_KEY_${exchange.toUpperCase()}`] || '',
             })
+            if (process.env.SOCKS_PROXY) {
+                config.socksProxy = process.env.SOCKS_PROXY
+                config.wsSocksProxy = process.env.SOCKS_PROXY
+            } else if (process.env.HTTP_PROXY) {
+                config.httpsProxy = process.env.HTTP_PROXY
+                config.wssProxy = process.env.HTTP_PROXY
+            }
         } else {
             Object.assign(config, {
                 apiKey: fs.readFileSync(`/run/secrets/API_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
@@ -70,6 +75,9 @@ class ExchangeModel {
         // this.awaitAccountUpdateCb = new Set(); // 保存awaitAccountUpdate方法调用产生的promise，item为promise的[resolve，reject]
     }
     async init() {
+        if (isDev() && process.env.SOCKS_PROXY) {
+            await this.exchange.loadProxyModules()
+        }
         await this.loadmarkets()
         // console.log('accountsByType', this.exchange.options['accountsByType'])
         // console.log('exhcange options', this.exchange.options)
