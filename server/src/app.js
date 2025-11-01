@@ -55,10 +55,10 @@ async function init() {
         .route("/transfer", transferRoute)
         .route("/auth", authRouter)
 
-    // app.onError((err, c) => {
-    //     console.error(err.message);
-    //     return c.json(err.message, 500);
-    // })
+    app.onError((err, c) => {
+        console.error(err.message)
+        return c.json(err.message, 500)
+    })
     const serverParams = {
         fetch: app.fetch,
         port: process.env.PORT || 3000,

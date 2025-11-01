@@ -82,9 +82,6 @@ export default {
                 }
                 this.showLogin = false
             } catch (e) {
-                // if (isDev()) {
-                //     this.$message.error(e.message)
-                // }
                 console.log(e)
                 this.showLogin = true
             }
@@ -97,13 +94,7 @@ export default {
                 this.init()
             } catch (e) {
                 console.log(e)
-                // if (isDev()) {
-                //     console.log(e)
-                //     this.$message.error({
-                //         message: JSON.stringify(e),
-                //         duration: 0
-                //     })
-                // }
+                
             }
         },
         async initExchangeData(exchange) {
@@ -199,14 +190,13 @@ export default {
                 }
             } catch (e) {
                 console.error(e)
-                // this.$message({
-                //     message: e.message,
-                //     type: 'error',
-                // })
+                this.$message({
+                    message: e.message,
+                    type: 'error',
+                })
             }
         },
         async handleMarginModeChange(mode) {
-            // todo 禁止改成cross
             try {
                 await service.setMarginMode(this.exchange, this.market.symbol, mode)
                 this.marginMode = mode
@@ -216,10 +206,10 @@ export default {
                 })
             } catch (e) {
                 console.error(e)
-                // this.$message({
-                //     message: e?.response?.data?.name,
-                //     type: 'error',
-                // })
+                this.$message({
+                    message: e?.response?.data?.name,
+                    type: 'error',
+                })
             }
         },
         async handleLeverageChange(leverage) {
@@ -233,10 +223,10 @@ export default {
                 })
             } catch (e) {
                 console.error(e)
-                // this.$message({
-                //     message: e?.response?.data?.name,
-                //     type: 'error',
-                // })
+                this.$message({
+                    message: e?.response?.data?.name,
+                    type: 'error',
+                })
             }
         },
         // 前端不需要做精确校验
@@ -303,10 +293,10 @@ export default {
                 this.resetForm(true)
             } catch (e) {
                 console.log(e)
-                // this.$message({
-                //     message: e.response.data,
-                //     type: 'error',
-                // })
+                this.$message({
+                    message: e.response.data,
+                    type: 'error',
+                })
             } finally {
                 loading.close()
             }
@@ -349,12 +339,13 @@ export default {
                 })
             } catch (e) {
                 console.log(e)
-                // this.$message({
-                //     message: e.message,
-                //     type: 'error',
-                // })
+                this.$message({
+                    message: e.message,
+                    type: 'error',
+                })
             }
         },
+        // 买或卖是否禁选，例如，现货止盈止损时不能选买入
         isSideDisabled(side) {
             if (this.orderType === ORDER_TYPES.MARKET) return false
             if (this.orderType === ORDER_TYPES.SLTP) {
@@ -393,6 +384,9 @@ export default {
             }
             this.orderType = ORDER_TYPES.SLTP
             this.resetForm()
+            if (this.isSideDisabled(this.orderSide)) {
+                this.orderSide = this.orderSide === ORDER_SIDES.BUY ? ORDER_SIDES.SELL : ORDER_SIDES.BUY
+            }
             this.backTop()
         },
         async handleEditOrder(order) {
@@ -779,6 +773,7 @@ export default {
         canChangeLeverage() {
             return !!this.curPosition
         },
+        // 是否显示止盈止损复选框，仅在建仓时显示
         showWithSLTP() {
             if (this.orderType === ORDER_TYPES.SLTP) {
                 return false
