@@ -45,7 +45,7 @@ class Monitor {
                     }
                 })
                 // 检测现货止盈止损和条件委托 合约条件委托
-                if (tickOrders.length || true) {
+                if (tickOrders.length) {
                     const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
                         logger.ticker({ exchange })
                         // console.log(orders)
@@ -71,7 +71,7 @@ class Monitor {
                     unsubs.push(unsubTicker)
                 }
                 
-                if (positionOrders.length || true) {
+                if (positionOrders.length) {
                     // 检测合约止盈止损
                     const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
                         logger.position({ exchange })

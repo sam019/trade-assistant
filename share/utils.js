@@ -26,7 +26,8 @@ export function isDev() {
     if (typeof global !== 'undefined') {
         return process.env.NODE_ENV !== 'production'
     }
-    return import.meta.env.NODE_ENV  !== 'production'
+    // console.log(import.meta.env.DEV)
+    return import.meta.env.DEV
 }
 
 export function formatTimestamp(timestamp) {

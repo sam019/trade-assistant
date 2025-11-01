@@ -69,6 +69,7 @@ class Logger {
     _receiveTickerTimout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Tickers SUSPEND receive from ${exchange}`)
+            bot.pushMessage(`${exchange} Ticker监听已中断`)
             this._tickerReceiveTimeout[exchange] = null
             _.set(this._lastUpdateTime, [exchange, 'ticker'], null)
         }, TICKER_SUSPENPOSITIOND_TIME)
@@ -91,6 +92,7 @@ class Logger {
     _receivePositionTimeout(exchange) {
         return setTimeout(() => {
             _logger.warn(`Positions SUSPEND receive from ${exchange}`)
+            bot.pushMessage(`${exchange} Position监听已中断`)
             this._positionReceiveTimout[exchange] = null
             _.set(this._lastUpdateTime, [exchange, 'position'], null)
         }, POSITION_SUSPEND_TIME)
