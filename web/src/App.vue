@@ -770,8 +770,8 @@ export default {
                 return bValue - aValue
             }) || []
         },
-        canChangeLeverage() {
-            return !!this.curPosition
+        canChangePosition() {
+            return !this.curPosition
         },
         // 是否显示止盈止损复选框，仅在建仓时显示
         showWithSLTP() {
@@ -842,7 +842,7 @@ export default {
             </el-col>
             <!-- 合约仓位类型，只支持逐仓 -->
             <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
-                <el-select :model-value="marginMode" @change="handleMarginModeChange">
+                <el-select :model-value="marginMode" :disabled="!canChangePosition" @change="handleMarginModeChange">
                     <el-option v-for="item in MARGIN_MODES" :key="item"
                         :label="item === MARGIN_MODES.CROSS ? '全仓' : '逐仓'" :value="item"
                         :disabled="item === MARGIN_MODES.CROSS"></el-option>
@@ -850,7 +850,7 @@ export default {
             </el-col>
             <!-- 合约杠杆倍数 -->
             <el-col v-if="!isSpotMarket" style="flex-basis: 100px;">
-                <el-select :model-value="leverage" @change="handleLeverageChange" :disabled="this.canChangeLeverage">
+                <el-select :model-value="leverage" @change="handleLeverageChange" :disabled="!canChangePosition">
                     <el-option v-for="item in [1, 2, 3, 4, 5]" :key="item" :label="item + 'x'"
                         :value="item"></el-option>
                 </el-select>
