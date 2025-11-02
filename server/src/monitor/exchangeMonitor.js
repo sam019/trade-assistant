@@ -12,8 +12,8 @@ const exchangeModels = {}
 
 class ExchangeModel {
     constructor(exchange) {
-        // console.log('process.env.NODE_ENV', process.env.NODE_ENV)
-        this.TESTNET = !!process.env.TESTNET
+        // console.log('process.env', process.env)
+        this.TESTNET = (process.env.TESTNET || '').toUpperCase() === 'TRUE'
         this.fetchInterval = 1000
         this.errRestTime = 5000
 
@@ -42,7 +42,7 @@ class ExchangeModel {
                 secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
             })
         }
-        // console.log('config', config)
+        // console.log('TESTNET', this.TESTNET)
         this.exchange = new ccxt.pro[exchange](config)
         if (this.TESTNET) {
             // this.exchange.setSandboxMode(true)
@@ -363,6 +363,8 @@ class ExchangeModel {
 
         symbols.forEach((cbSymbols) => {
             (Array.isArray(cbSymbols) ? cbSymbols : [cbSymbols]).forEach((symbol) => {
+                // console.log('this.exchange.markets[symbol]', !!this.exchange.markets[symbol])
+                if (!this.exchange.markets[symbol]) return
                 const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
                 if (!match[3]) {
                     symbolsNeedWatch.spot.add(symbol)

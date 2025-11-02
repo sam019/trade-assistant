@@ -28,8 +28,8 @@ export async function getMarket(exchange, symbol) {
     return response.data
 }
 
-export async function searchMarkets(exchange, keywords) {
-    const response = await service.post('/market/search', { exchange, keywords })
+export async function searchMarkets(exchange, keywords, refreshMarket) {
+    const response = await service.post('/market/search', { exchange, keywords, refreshMarket })
     return response.data
 }
 

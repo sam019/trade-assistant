@@ -32,9 +32,9 @@ export default {
                 this.$refs.input?.focus()
             })
         },
-        handleKeywordsChange: debounce(function () {
-            console.log(this.keywords)
-            this.$emit('search', this.keywords)
+        handleKeywordsChange: debounce(function (refresh) {
+            // console.log(this.keywords)
+            this.$emit('search', this.keywords, refresh)
         }, 500),
     },
     computed: {
@@ -52,7 +52,7 @@ export default {
     <el-dialog :model-value="visible" @closed="onClosed" @open="onOpen" style="width: 100vw; max-width: 720px">
         <!-- 交易对搜索 -->
         <div style="display: flex; align-items: center; padding: 10px">
-            <el-input ref="input" v-model="keywords" @input="handleKeywordsChange" prefix-icon="Search"
+            <el-input ref="input" v-model="keywords" @input="handleKeywordsChange()" prefix-icon="Search"
                 size="large"></el-input>
         </div>
         <!-- 可用交易对 -->
@@ -68,7 +68,9 @@ export default {
                     <el-col style="flex-basis: auto">{{ market.symbol }}</el-col>
                 </el-row>
                 <el-row v-if="!tab.markets.length" align="middle" justify="center" class="market"
-                    style="color: gray; border-bottom: none">无数据</el-row>
+                    style="color: gray; border-bottom: none">无数据<el-button text type="info"
+                        style="padding: 0; text-decoration-line: underline; margin-left: 5px;"
+                        @click="handleKeywordsChange(true)">刷新缓存搜索</el-button></el-row>
             </el-tab-pane>
         </el-tabs>
     </el-dialog>

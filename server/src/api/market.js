@@ -27,10 +27,13 @@ favoriteMarketsMonitor.init()
  */
 app.post('/search', async function searchMarkets(c) {
     const body = await c.req.json()
-    let { exchange, keywords = '' } = body
+    let { exchange, keywords = '', refreshMarket = false } = body
     keywords = keywords.trim().toLowerCase()
-    // console.log(exchange, keywords)
+    // console.log(exchange, keywords, refreshMarket)
     const exchangeMonitor = getExchangeMonitor(exchange)
+    if (refreshMarket) {
+        await exchangeMonitor.loadmarkets()
+    }
     const markets = exchangeMonitor.markets
     const limit = 10
     const matchMarket = {}

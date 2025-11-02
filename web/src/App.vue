@@ -7,7 +7,7 @@ import { ElLoading } from 'element-plus'
 import Decimal from 'decimal.js'
 
 import { MARKET_TYPES, ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, MARGIN_MODES, POSITION_SIDES, STABLE_COINS } from '../../share/const'
-import { checkSymbol, isDev } from '../../share/utils'
+import { checkSymbol } from '../../share/utils'
 
 import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
@@ -56,6 +56,7 @@ export default {
             slPrice: null, // 市价单附带的止损触发价
             tpPrice: null, // 市价单附带的止盈触发价
             triggerPrice: null, // 条件委托的触发价
+            showConfirm: false, // 下单确认框
 
             ORDER_TYPES,
             ORDER_SIDES,
@@ -63,7 +64,7 @@ export default {
             MARGIN_MODES,
             MARKET_TYPES,
             POSITION_SIDES,
-            dialogVisible: false,
+            showMarketDialog: false,
         }
     },
     methods: {
@@ -127,7 +128,7 @@ export default {
         },
         changeMarket(market) {
             // console.log('change market', market)
-            this.dialogVisible = false
+            this.showMarketDialog = false
             if (market?.symbol === this.market.symbol) return
             this.market = {}
             this.orderSide = ORDER_SIDES.BUY
@@ -161,18 +162,17 @@ export default {
             // console.log('market', window.location.search)
         },
         closeDialog() {
-            this.dialogVisible = false
+            this.showMarketDialog = false
             this.markets = null
         },
-        async searchMarkets(keywords) {
-            // console.log('searchMarkets', keywords)
+        async searchMarkets(keywords, refresh) {
             if (!keywords) {
                 if (this.defaultMarkets) {
                     this.markets = this.defaultMarkets
                     return
                 }
             }
-            const res = await service.searchMarkets(this.exchange, keywords)
+            const res = await service.searchMarkets(this.exchange, keywords, refresh)
             if (!keywords) {
                 this.defaultMarkets = res
             }
@@ -264,6 +264,10 @@ export default {
                 })
                 return
             }
+            this.showConfirm = true
+        },
+        async handleConfirmOrder() {
+            this.showConfirm = false
             const loading = ElLoading.service()
             // TODO 弹框确认
             try {
@@ -457,6 +461,7 @@ export default {
                 inverse: new Decimal(balance.inverse || 0).mul(ticker?.last || 0).toDecimalPlaces(2).toNumber(),
                 lastPrice: ticker?.last || 0,
             }
+            value.total = value.spot + value.linear + value.inverse
             return value
         },
         async handleJumpMarket(symbol) {
@@ -565,7 +570,6 @@ export default {
                 }
                 return b.evaluateValue[this.marketType] - a.evaluateValue[this.marketType]
             })
-            // this.$message({ message: `balances ${JSON.stringify(balances)}` })
             return balances
         },
         symbolsNeedTicker() {
@@ -576,7 +580,6 @@ export default {
                 }
                 symbols.push(`${balance.currency}/${STABLE_COINS.USDT}`)
             })
-            // this.$message({ message: `symbolsNeedTicker ${JSON.stringify(this.balances)}` })
             this.market?.symbol && symbols.push(this.market.symbol)
             symbols.sort() // 排序方便比较
             return symbols
@@ -804,7 +807,7 @@ export default {
 </script>
 
 <template>
-    <MarketSelectPanel :visible="dialogVisible" @close="closeDialog" @search="searchMarkets"
+    <MarketSelectPanel :visible="showMarketDialog" @close="closeDialog" @search="searchMarkets"
         @favorite="toggleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
     <Login v-if="showLogin" @submit="handleLogin"></Login>
     <div v-else>
@@ -821,7 +824,7 @@ export default {
             @click="backTop">
             <!-- 选择交易对，并显示最新收盘价 -->
             <el-col style="flex-basis: 50%;">
-                <el-button text @click="dialogVisible = true">{{ curSymbol }}<el-icon style="margin-left: 10px;">
+                <el-button text @click="showMarketDialog = true">{{ curSymbol }}<el-icon style="margin-left: 10px;">
                         <ArrowDownBold />
                     </el-icon></el-button>
             </el-col>
@@ -975,6 +978,16 @@ export default {
                 </Order>
             </el-tab-pane>
         </el-tabs>
+        <el-drawer :model-value="showConfirm" direction="btt" :show-close="false" :with-header="false" :modal="true"
+            @closed="showConfirm = false">
+            <div>确认下单吗？</div>
+            <template #footer>
+                <div style="display: flex; justify-content: space-between;">
+                    <el-button @click="showConfirm = false" style="width: 150px;">取消</el-button>
+                    <el-button type="primary" style="width: 150px;" @click="handleConfirmOrder">确认</el-button>
+                </div>
+            </template>
+        </el-drawer>
     </div>
 </template>
 
@@ -999,4 +1012,8 @@ export default {
         overflow-y: auto;
     }
 }
+</style>
+<style>
+/* .order-confirm-box {
+} */
 </style>
