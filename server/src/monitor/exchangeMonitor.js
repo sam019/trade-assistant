@@ -42,6 +42,7 @@ class ExchangeModel {
                 secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
             })
         }
+        console.log('config', config)
         // console.log('TESTNET', this.TESTNET)
         this.exchange = new ccxt.pro[exchange](config)
         if (this.TESTNET) {
@@ -153,7 +154,9 @@ class ExchangeModel {
         while (true) {
             try {
                 const sign = Date.now()
-                const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
+                // const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
+                const result = await Promise.all([this.watchBalance('spot')])
+                console.log('watchBalance', result)
                 const balance = {}
                 Object.values(result).forEach((item, index) => {
                     const type = index === 0 ? 'spot' : index === 1 ? 'linear' : 'inverse'
@@ -202,7 +205,7 @@ class ExchangeModel {
                 this.positions.forEach(pos => {
                     pos.leverage = this.leverages[pos.symbol]
                 })
-                // console.log('WatchPositions', this.positions)
+                console.log('WatchPositions', this.positions)
                 this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
                     const r = this.positions.filter(pos => symbols.includes(pos.symbol))
                     // console.log('awaitPositionsUpdateCb', symbols, r)
@@ -308,10 +311,9 @@ class ExchangeModel {
         while (true) {
             try {
                 const sign = Date.now()
-                const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
+                const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values(), 'BTC/USDT', 'BTC/USDT:USDT', 'BTC/USD:BTC'])
                 this.tickers = tickers
-                // console.log('tickers', Object.keys(tickers))
-                // console.log('tickers update', new Date().toLocaleTimeString(), this.exchange.id, Object.entries(tickers).map(([k, t]) => [k, t.last]).length)
+                console.log('watchTickers', new Date().toLocaleTimeString(), Object.entries(tickers).map(([k, v]) => `${k}:${v.last}`))
                 // console.log(this.tickersCbSymbolMap)
                 this.tickersCbSymbolMap.entries().forEach(([cb, cbSymbols]) => {
                     const r = cbSymbols.reduce((a, b) => Object.assign(a, { [b]: tickers[b] }), {})
@@ -402,7 +404,7 @@ class ExchangeModel {
         }
     }
     onPositionsUpdate(cb) {
-        process.nextTick(() => this.positions && cb(this.positions))
+        process.nextTick(() => this.positions?.length && cb(this.positions))
         this.positionsCbMap.add(cb)
         return () => {
             this.positionsCbMap.delete(cb)

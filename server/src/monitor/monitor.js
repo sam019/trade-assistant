@@ -33,8 +33,11 @@ class Monitor {
             // 先取消之前的订阅
             unsubs.forEach(unsub => unsub && unsub())
             unsubs = []
-            Object.entries(ordersGroupByExchange).forEach(([exchange, { spot, linear, inverse }]) => {
-                // console.log('ordersGroupByExchange', exchange, spot, linear);
+            // Object.entries(ordersGroupByExchange).forEach(([exchange, { spot, linear, inverse }]) => {
+            //     // console.log('ordersGroupByExchange', exchange, spot, linear);
+            // })
+            SUPPORTED_EXCHANGES.forEach(exchange => {
+                const { spot = [], linear = [], inverse = [] } = ordersGroupByExchange[exchange] || {}
                 const tickOrders = [...spot.orders]
                 const positionOrders = [];
                 [...linear.orders, ...inverse.orders].forEach(order => {
@@ -45,47 +48,43 @@ class Monitor {
                     }
                 })
                 // 检测现货止盈止损和条件委托 合约条件委托
-                if (tickOrders.length) {
-                    const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
-                        logger.ticker({ exchange })
-                        // console.log(orders)
-                        tickOrders.forEach((order) => {
-                        // console.log(order.symbol)
-                            const ticker = tickers[order.symbol]
-                            if (ticker) {
-                                const cSymbol = checkSymbol(order.symbol)
-                                if (cSymbol.isSpot) {
-                                    if (order.type === ORDER_TYPES.CONDITION) {
-                                        checkSpotCondOrder(order, ticker)
-                                    } else {
-                                        checkSpotSLTPOrder(order, ticker)
-                                    }
+                const unsubTicker = getExchangeMonitor(exchange).onTickersUpdate(tickOrders.map(t => t.symbol), (tickers) => {
+                    // console.log('tickers', tickers)
+                    logger.ticker({ exchange })
+                    tickOrders.forEach((order) => {
+                    // console.log(order.symbol)
+                        const ticker = tickers[order.symbol]
+                        if (ticker) {
+                            const cSymbol = checkSymbol(order.symbol)
+                            if (cSymbol.isSpot) {
+                                if (order.type === ORDER_TYPES.CONDITION) {
+                                    checkSpotCondOrder(order, ticker)
                                 } else {
-                                    if (order.type === ORDER_TYPES.CONDITION) {
-                                        checkPerpCondOrder(order, ticker)
-                                    }
+                                    checkSpotSLTPOrder(order, ticker)
+                                }
+                            } else {
+                                if (order.type === ORDER_TYPES.CONDITION) {
+                                    checkPerpCondOrder(order, ticker)
                                 }
                             }
-                        })
+                        }
                     })
-                    unsubs.push(unsubTicker)
-                }
-                
-                if (positionOrders.length) {
-                    // 检测合约止盈止损
-                    const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
-                        logger.position({ exchange })
-                        // console.log(positions);
-                        positionOrders.forEach((order) => {
-                        // console.log(order.symbol, match)
-                            const position = positions.find(pos => pos.symbol === order.symbol)
-                            if (position) {
-                                checkPerpSLTPOrder(order, position)
-                            }
-                        })
+                })
+                unsubs.push(unsubTicker)
+
+                // 检测合约止盈止损
+                const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
+                    console.log('positions', positions);
+                    logger.position({ exchange })
+                    positionOrders.forEach((order) => {
+                    // console.log(order.symbol, match)
+                        const position = positions.find(pos => pos.symbol === order.symbol)
+                        if (position) {
+                            checkPerpSLTPOrder(order, position)
+                        }
                     })
-                    unsubs.push(unsubPosition)
-                }
+                })
+                unsubs.push(unsubPosition)
             })
         })
     }

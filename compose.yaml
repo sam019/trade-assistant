@@ -29,9 +29,9 @@ services:
             additional_contexts:
                 - share=./share
         container_name: ta-server
-        # restart: unless-stopped
+        restart: unless-stopped
         volumes:
-            - ./logs/:/App/server/logs/
+            - ./logs:/app/server/logs
         ports:
             - 8080:8080
         environment:
@@ -39,7 +39,7 @@ services:
             - TESTNET=true
             - PORT=8080
             - WEB_PORT=443
-            - DOMAIN="rollingin.top"
+            - DOMAIN="ta.rollingin.top"
         secrets:
             - PASSWORD
             - BOT_TOKEN
@@ -63,8 +63,8 @@ services:
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
-        depends_on:
-            - server
+        # depends_on:
+        #     - server
 volumes:
     data_db:
     Caddy_data:
