@@ -154,8 +154,8 @@ class ExchangeModel {
         while (true) {
             try {
                 const sign = Date.now()
-                // const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
-                const result = await Promise.all([this.watchBalance('spot')])
+                const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
+                // const result = await Promise.all([this.watchBalance('spot')])
                 console.log('watchBalance', result)
                 const balance = {}
                 Object.values(result).forEach((item, index) => {
@@ -311,7 +311,8 @@ class ExchangeModel {
         while (true) {
             try {
                 const sign = Date.now()
-                const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values(), 'BTC/USDT', 'BTC/USDT:USDT', 'BTC/USD:BTC'])
+                // const defaultSymbols = ['BTC/USDT', 'BTC/USDT:USDT', 'BTC/USD:BTC']
+                const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
                 this.tickers = tickers
                 console.log('watchTickers', new Date().toLocaleTimeString(), Object.entries(tickers).map(([k, v]) => `${k}:${v.last}`))
                 // console.log(this.tickersCbSymbolMap)

@@ -37,10 +37,10 @@ class Monitor {
             //     // console.log('ordersGroupByExchange', exchange, spot, linear);
             // })
             SUPPORTED_EXCHANGES.forEach(exchange => {
-                const { spot = [], linear = [], inverse = [] } = ordersGroupByExchange[exchange] || {}
-                const tickOrders = [...spot.orders]
+                const { spot, linear, inverse } = ordersGroupByExchange[exchange] || {}
+                const tickOrders = [...(spot?.orders || [])]
                 const positionOrders = [];
-                [...linear.orders, ...inverse.orders].forEach(order => {
+                [...(linear?.orders || []), ...(inverse?.orders || [])].forEach(order => {
                     if (order.type === ORDER_TYPES.CONDITION) {
                         tickOrders.push(order)
                     } else {
