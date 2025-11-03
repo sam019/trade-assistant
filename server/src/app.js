@@ -4,6 +4,7 @@ import { cors } from "hono/cors"
 import { Server } from "socket.io"
 import fs from 'fs'
 import { createServer } from 'node:https'
+import Decimal from "decimal.js"
 
 import connectDB from "./database/db.js"
 import monitor from "./monitor/monitor.js"
@@ -19,7 +20,8 @@ import socketHandler from "./api/socketHandler.js"
 
 import { isDev } from "../../share/utils.js"
 
-
+// 设置Decimal的默认舍入模式
+Decimal.config({ rounding: Decimal.ROUND_DOWN })
 
 let corsOrigin
 // console.log('isDev', isDev())

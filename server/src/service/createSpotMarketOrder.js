@@ -104,7 +104,7 @@ export default async function createSpotMarketOrder(data, options = {}) {
     
     console.log('创建现货市价单', exchange, symbol, side, params.quantity || params.quoteOrderQty, params.quantity ? market.base : market.quote)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    console.log('下单成功', result.filled, result.cost)
+    console.log(`下单成功 filled:${result.filled} amount:${result.amount} cost:${result.cost}`)
     if (withSLTP) {
         sltpParams.amount = result.filled
         sltpParams.unit = ORDER_AMOUNT_TYPES.BASE
