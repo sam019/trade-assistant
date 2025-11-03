@@ -118,7 +118,7 @@ export default async function checPerpSLTPOrder(order, position) {
         if (isDev()) {
             throw e
         }
-        await sleep(5000)
+        await sleep(1000)
         // console.log('仓位止盈止损出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)

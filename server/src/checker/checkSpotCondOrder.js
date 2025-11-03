@@ -71,7 +71,7 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         }
     } catch (e) {
         logger.condErr({ exchange, symbol, e })
-        await sleep(5000)
+        await sleep(1000)
         if (isDev()) {
             throw e
         }

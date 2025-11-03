@@ -1,6 +1,6 @@
 <script>
 // import { ElMessage } from '@hc/element-plus'
-import CryptoJS from 'crypto-js';
+import CryptoJS from 'crypto-js'
 import { computed } from 'vue'
 import _ from 'lodash'
 import { ElLoading } from 'element-plus'
@@ -57,6 +57,8 @@ export default {
             tpPrice: null, // 市价单附带的止盈触发价
             triggerPrice: null, // 条件委托的触发价
             showConfirm: false, // 下单确认框
+            showMarketDialog: false, // market搜索框
+            isSocketSuspend: false, // 通过ticker判断数据推送是否已暂停
 
             ORDER_TYPES,
             ORDER_SIDES,
@@ -64,7 +66,6 @@ export default {
             MARGIN_MODES,
             MARKET_TYPES,
             POSITION_SIDES,
-            showMarketDialog: false,
         }
     },
     methods: {
@@ -72,6 +73,10 @@ export default {
             try {
                 // this.showLogin = true
                 await socket.connect()
+                socket.onConnectStateChange((isConnect) => {
+                    // console.log('onConnectStateChange', isConnect)
+                    this.isSocketSuspend = !isConnect
+                })
                 // socket.connect()
                 const supportedExhcanges = await service.getSupportedExchanges()
                 this.exchanges = supportedExhcanges
@@ -828,10 +833,11 @@ export default {
                         <ArrowDownBold />
                     </el-icon></el-button>
             </el-col>
-            <el-col style="flex-basis: 50%;">
+            <el-col style="flex-basis: 50%; position: relative;">
                 <div>{{ lastPrice }}</div>
                 <div v-show="priceChanged" :style="{ color: ticker.change >= 0 ? 'green' : 'red' }">{{ priceChanged }}
                 </div>
+                <div class="socket-indicator" :style="{ backgroundColor: isSocketSuspend ? 'red' : 'green' }"></div>
             </el-col>
         </el-row>
         <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
@@ -887,20 +893,20 @@ export default {
         <!-- 条件委托触发价格 -->
         <div v-show="orderType === ORDER_TYPES.CONDITION"
             style="display: flex; flex-direction: column; padding: 0 10px;">
-            <el-input v-model="triggerPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
+            <el-input v-model="triggerPrice" type="number" inputmode="decimal" clearable :controls="false" :min="0"
                 :placeholder="`触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
         </div>
         <!-- 止盈止损触发价格 -->
         <div v-show="orderType === ORDER_TYPES.SLTP" style="display: flex; flex-direction: column; padding: 0 10px;">
-            <el-input v-model="tpPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
+            <el-input v-model="tpPrice" type="number" inputmode="decimal" clearable :controls="false" :min="0"
                 :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="width: 100%;"></el-input>
-            <el-input v-model="slPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
+            <el-input v-model="slPrice" type="number" inputmode="decimal" clearable :controls="false" :min="0"
                 :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`"
                 style="width: 100%; margin-top: 5px;"></el-input>
         </div>
         <!-- 下单仓位数量 -->
         <div style="position: relative; padding: 10px 10px;">
-            <el-input type="number" inputmode="numeric" clearable v-model="orderAmount" @change="handleAmountChange"
+            <el-input type="number" inputmode="decimal" clearable v-model="orderAmount" @change="handleAmountChange"
                 @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : '数量(保证金)'"
                 :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
                 <template #prefix>
@@ -938,11 +944,11 @@ export default {
         <!-- 下单附带止盈止损设置 -->
         <div v-show="orderWithSLTP" style="padding: 0 10px;">
             <div style="display: flex; align-items: center; margin-bottom: 5px;">
-                <el-input v-model="tpPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
+                <el-input v-model="tpPrice" type="number" inputmode="decimal" clearable :controls="false" :min="0"
                     :placeholder="`止盈触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
             </div>
             <div style="display: flex; align-items: center;">
-                <el-input v-model="slPrice" type="number" inputmode="numeric" clearable :controls="false" :min="0"
+                <el-input v-model="slPrice" type="number" inputmode="decimal" clearable :controls="false" :min="0"
                     :placeholder="`止损触发价(${market[ORDER_AMOUNT_TYPES.QUOTE]})`" style="flex-grow: 1;"></el-input>
             </div>
         </div>
@@ -1011,6 +1017,14 @@ export default {
     :deep(.el-tabs__content) {
         overflow-y: auto;
     }
+}
+.socket-indicator {
+    position: absolute;
+    right: 10px;
+    top: 4px;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
 }
 </style>
 <style>

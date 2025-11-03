@@ -101,7 +101,7 @@ export default async function checkPerpCondOrder(order, ticker) {
         if (isDev()) {
             throw e
         }
-        await sleep(5000)
+        await sleep(1000)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
         

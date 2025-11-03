@@ -15,6 +15,7 @@ class Socket {
         this.symbols = null
         this.tickerUpdateCbs = new Map()
         this.accountUpdateCbs = new Set()
+        this.connectStateCbs = new Set()
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'hidden') {
                 if (this.socket) {
@@ -28,9 +29,16 @@ class Socket {
                     await this.connect()
                     this.recoverSubscribe()
                 }
-                
             }
         })
+    }
+
+    onConnectStateChange(cb) {
+        this.connectStateCbs.add(cb)
+        setTimeout(() => cb(this.connected))
+        return () => {
+            this.connectStateCbs.delete(cb)
+        }
     }
 
     connect() {
@@ -51,10 +59,12 @@ class Socket {
             this.connected = true
             this.inited = true
             res()
+            this.connectStateCbs.forEach(cb => cb(this.connected))
         })
         this.socket.on('disconnect', () => {
             console.log('disconnect')
             this.connected = false
+            this.connectStateCbs.forEach(cb => cb(this.connected))
             if (document.visibilityState === 'visible') {
                 ElMessage.error('连接已断开')
             }
@@ -85,7 +95,7 @@ class Socket {
         if (this.accountSubCb) {
             this.subscribeAccount(this.exchange, this.accountSubCb)
         }
-        ElMessage.success('连接已恢复')
+        // ElMessage.success('连接已恢复')
     }
 
     post(path, data) {
