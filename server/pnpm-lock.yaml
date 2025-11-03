@@ -12,8 +12,8 @@ importers:
         specifier: ^1.19.5
         version: 1.19.5(hono@4.10.1)
       ccxt:
-        specifier: ^4.5.9
-        version: 4.5.10
+        specifier: ^4.5.14
+        version: 4.5.14
       decimal.js:
         specifier: ^10.6.0
         version: 10.6.0
@@ -335,8 +335,8 @@ packages:
   caseless@0.12.0:
     resolution: {integrity: sha512-4tYFyifaFfGacoiObjJegolkwSU4xQNGbVgUiNYVUxbQ2x2lUsFvY4hVgVzGiIe6WLOPqycWXA40l+PWsxthUw==}
 
-  ccxt@4.5.10:
-    resolution: {integrity: sha512-qf53wrD09IQNmjT1h/msAkk7QqXLHILbmbjbDkse98MyYU/KMOn7XkZrII8XqdY/6nIC6+7Gnw/JYrUmLymhmw==}
+  ccxt@4.5.14:
+    resolution: {integrity: sha512-aNd03zrsCX0Oru3ulTft6Uk1QSE87JcRPxddRId4puEZ9baTTYbUnKnkcxmFzagUoOvKlidnn7XCgzTKThk9pw==}
     engines: {node: '>=15.0.0'}
 
   combined-stream@1.0.8:
@@ -1410,7 +1410,7 @@ snapshots:
 
   caseless@0.12.0: {}
 
-  ccxt@4.5.10:
+  ccxt@4.5.14:
     dependencies:
       ws: 8.18.3
     transitivePeerDependencies:
