@@ -408,7 +408,9 @@ class ExchangeModel {
         }
     }
     onPositionsUpdate(cb) {
-        process.nextTick(() => this.positions?.length && cb(this.positions))
+        if (this.positions?.length) {
+            process.nextTick(() =>cb(this.positions))
+        }
         this.positionsCbMap.add(cb)
         return () => {
             this.positionsCbMap.delete(cb)

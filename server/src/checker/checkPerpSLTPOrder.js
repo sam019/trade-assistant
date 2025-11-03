@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js'
 import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
-import { checkSymbol, isDev } from '../../../share/utils.js'
+import { checkSymbol, isDev, sleep } from '../../../share/utils.js'
 import service from '../service/index.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
@@ -115,11 +115,13 @@ export default async function checPerpSLTPOrder(order, position) {
         }
     } catch (e) {
         logger.sltpErr({ exchange, symbol, e })
-        // console.log('仓位止盈止损出错, id:' + _id, e)
-        // await orderModel.findByIdAndDelete(_id);
-        orderWatcher.unmarkOrderDealing(_id)
         if (isDev()) {
             throw e
         }
+        await sleep(5000)
+        // console.log('仓位止盈止损出错, id:' + _id, e)
+        // await orderModel.findByIdAndDelete(_id);
+        orderWatcher.unmarkOrderDealing(_id)
+        
     }
 }

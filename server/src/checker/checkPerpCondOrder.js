@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js'
-import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
-import { checkSymbol, isDev } from '../../../share/utils.js'
+import { ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
+import { checkSymbol, isDev, sleep } from '../../../share/utils.js'
 import service from '../service/index.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
@@ -98,10 +98,12 @@ export default async function checkPerpCondOrder(order, ticker) {
     } catch (e) {
         // console.log('条件委托出错, id:' + _id, e)
         logger.condErr({ exchange, symbol, e })
-        // await orderModel.findByIdAndDelete(_id);
-        orderWatcher.unmarkOrderDealing(_id)
         if (isDev()) {
             throw e
         }
+        await sleep(5000)
+        // await orderModel.findByIdAndDelete(_id);
+        orderWatcher.unmarkOrderDealing(_id)
+        
     }
 }
