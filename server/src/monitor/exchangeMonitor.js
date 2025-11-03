@@ -14,10 +14,12 @@ class ExchangeModel {
     constructor(exchange) {
         // console.log('process.env', process.env)
         this.TESTNET = (process.env.TESTNET || '').toUpperCase() === 'TRUE'
+        // console.log('this.TESTNET', this.TESTNET)
         this.fetchInterval = 1000
         this.errRestTime = 5000
 
         const config = {
+            // verbose: true,
             enableRateLimit: true,
             options: {
                 // defaultType: 'future'
@@ -42,7 +44,7 @@ class ExchangeModel {
                 secret: fs.readFileSync(`/run/secrets/SECRET_KEY_${exchange.toUpperCase()}`, 'utf8').trim(),
             })
         }
-        console.log('config', config)
+        // console.log('config', config)
         // console.log('TESTNET', this.TESTNET)
         this.exchange = new ccxt.pro[exchange](config)
         if (this.TESTNET) {
@@ -80,6 +82,7 @@ class ExchangeModel {
             await this.exchange.loadProxyModules()
         }
         await this.loadmarkets()
+        // this.exchange.verbose = true
         // console.log('accountsByType', this.exchange.options['accountsByType'])
         // console.log('exhcange options', this.exchange.options)
         // this.exchange.verbose = true; // for debug purpose set it to true
@@ -156,7 +159,7 @@ class ExchangeModel {
                 const sign = Date.now()
                 const result = await Promise.all([this.watchBalance('spot'), this.watchBalance('future', 'linear'), this.watchBalance('future', 'inverse')])
                 // const result = await Promise.all([this.watchBalance('spot')])
-                console.log('watchBalance', result)
+                // console.log('watchBalance', result)
                 const balance = {}
                 Object.values(result).forEach((item, index) => {
                     const type = index === 0 ? 'spot' : index === 1 ? 'linear' : 'inverse'
@@ -205,7 +208,7 @@ class ExchangeModel {
                 this.positions.forEach(pos => {
                     pos.leverage = this.leverages[pos.symbol]
                 })
-                console.log('WatchPositions', this.positions)
+                // console.log('WatchPositions', this.positions)
                 this.awaitPositionsUpdateCb.entries().forEach(([cb, symbols]) => {
                     const r = this.positions.filter(pos => symbols.includes(pos.symbol))
                     // console.log('awaitPositionsUpdateCb', symbols, r)
@@ -314,7 +317,7 @@ class ExchangeModel {
                 // const defaultSymbols = ['BTC/USDT', 'BTC/USDT:USDT', 'BTC/USD:BTC']
                 const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
                 this.tickers = tickers
-                console.log('watchTickers', new Date().toLocaleTimeString(), Object.entries(tickers).map(([k, v]) => `${k}:${v.last}`))
+                // console.log('watchTickers', new Date().toLocaleTimeString(), Object.entries(tickers).map(([k, v]) => `${k}:${v.last}`))
                 // console.log(this.tickersCbSymbolMap)
                 this.tickersCbSymbolMap.entries().forEach(([cb, cbSymbols]) => {
                     const r = cbSymbols.reduce((a, b) => Object.assign(a, { [b]: tickers[b] }), {})

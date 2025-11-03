@@ -74,7 +74,7 @@ class Monitor {
 
                 // 检测合约止盈止损
                 const unsubPosition = getExchangeMonitor(exchange).onPositionsUpdate((positions) => {
-                    console.log('positions', positions);
+                    // console.log('positions', positions);
                     logger.position({ exchange })
                     positionOrders.forEach((order) => {
                     // console.log(order.symbol, match)
