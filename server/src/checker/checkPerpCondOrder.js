@@ -96,11 +96,11 @@ export default async function checkPerpCondOrder(order, ticker) {
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        // console.log('条件委托出错, id:' + _id, e)
-        logger.condErr({ exchange, symbol, e })
         if (isDev()) {
             throw e
         }
+        // console.log('条件委托出错, id:' + _id, e)
+        logger.condErr({ exchange, symbol, e })
         await sleep(1000)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)

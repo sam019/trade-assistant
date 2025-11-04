@@ -42,49 +42,44 @@ class Socket {
     }
 
     connect() {
-        let res, rej
-        const promise = new Promise((_res, _rej) => {
-            res = _res
-            rej = _rej
+        return new Promise((res, rej) => {
+            this.socket = io(wsURL, {
+                reconnectionDelayMax: 5000,
+                withCredentials: true,
+            // transports: ['websocket'],
+            })
+            this.socket.on('connect_error', (err) => rej(err))
+            this.socket.on('connect', () => {
+                console.log('connect')
+                this.connected = true
+                this.inited = true
+                res()
+                this.connectStateCbs.forEach(cb => cb(this.connected))
+            })
+            this.socket.on('disconnect', () => {
+                console.log('disconnect')
+                this.connected = false
+                this.connectStateCbs.forEach(cb => cb(this.connected))
+                if (document.visibilityState === 'visible') {
+                    ElMessage.error('连接已断开')
+                }
+            })
+            this.socket.io.on('reconnection_attempt ', () => {
+                console.log('reconnection_attempt')
+            })
+            this.socket.io.on('reconnect_error', () => {
+                console.log('reconnect_error')
+            })
+            this.socket.io.on('reconnect_failed', () => {
+                console.log('reconnect_failed')
+            })
+            this.socket.io.on('reconnect', () => {
+                console.log('reconnect')
+                this.connected = true
+                this.recoverSubscribe()
+            })
         })
         // console.log('connect apiURL: ', apiURL)
-        this.socket = io(wsURL, {
-            reconnectionDelayMax: 5000,
-            withCredentials: true,
-            // transports: ['websocket'],
-        })
-        this.socket.on('connect_error', (err) => rej(err))
-        this.socket.on('connect', () => {
-            console.log('connect')
-            this.connected = true
-            this.inited = true
-            res()
-            this.connectStateCbs.forEach(cb => cb(this.connected))
-        })
-        this.socket.on('disconnect', () => {
-            console.log('disconnect')
-            this.connected = false
-            this.connectStateCbs.forEach(cb => cb(this.connected))
-            if (document.visibilityState === 'visible') {
-                ElMessage.error('连接已断开')
-            }
-        })
-        this.socket.io.on('reconnection_attempt ', () => {
-            console.log('reconnection_attempt')
-        })
-        this.socket.io.on('reconnect_error', () => {
-            console.log('reconnect_error')
-        })
-        this.socket.io.on('reconnect_failed', () => {
-            console.log('reconnect_failed')
-        })
-        this.socket.io.on('reconnect', () => {
-            console.log('reconnect')
-            this.connected = true
-            this.recoverSubscribe()
-        })
-        
-        return promise
     }
 
     recoverSubscribe() {
@@ -99,13 +94,9 @@ class Socket {
     }
 
     post(path, data) {
-        let res, rej
-        const promise = new Promise((_res, _rej) => {
-            res = _res
-            rej = _rej
+        return new Promise((res, rej) => {
+            this.socket.timeout(API_TIMEOUT).emit(path, data, (err, response) => err ? rej(err) : res(response))
         })
-        this.socket.timeout(API_TIMEOUT).emit(path, data, (err, response) => err ? rej(err) : res(response))
-        return promise
     }
 
     subscribeTickers(exchange, symbols, cb) {

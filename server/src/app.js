@@ -1,24 +1,21 @@
 import { serve } from "@hono/node-server"
 import { Hono } from "hono"
 import { cors } from "hono/cors"
-import { Server } from "socket.io"
 import fs from 'fs'
 import { createServer } from 'node:https'
 import Decimal from "decimal.js"
 
+import { isDev } from "../../share/utils.js"
+
 import connectDB from "./database/db.js"
 import monitor from "./monitor/monitor.js"
-
 import orderRoute from "./api/order.js"
 import marketRoute from "./api/market.js"
 import exchangeRoute from "./api/exchange.js"
 import positionRoute from "./api/position.js"
 import transferRoute from "./api/transfer.js"
-import { authRouter, ioAuth, httpAuth } from "./auth/auth.js"
-
-import socketHandler from "./api/socketHandler.js"
-
-import { isDev } from "../../share/utils.js"
+import { authRouter, httpAuth } from "./auth/auth.js"
+import socket from "./socket/socket.js"
 
 // 设置Decimal的默认舍入模式
 Decimal.config({ rounding: Decimal.ROUND_DOWN })
@@ -79,15 +76,7 @@ async function init() {
         },
     )
     // console.log('corsOrigin', corsOrigin)
-    const io = new Server(server, {
-        cors: {
-            origin: corsOrigin,
-            credentials: true,
-            maxAge: 3600, // 加了这个ios26的safari才能通过cors校验，原因未知
-        },
-    })
-    io.use(ioAuth)
-    io.on('connection', socketHandler)
+    socket.serve({ server, corsOrigin })
 }
 
 init()

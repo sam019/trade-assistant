@@ -17,6 +17,7 @@ export default defineConfig([
             indent: [1, 4],
             "vue/multi-word-component-names": 0,
             "vue/return-in-computed-property": 0,
+            "vue/no-unused-components": 1,
             "no-useless-catch": 0,
             "no-constant-condition": 1,
             "object-curly-spacing": [1, "always"],

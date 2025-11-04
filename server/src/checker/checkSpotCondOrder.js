@@ -70,11 +70,11 @@ export default async function checkSpotSLTPOrder(order, ticker) {
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        logger.condErr({ exchange, symbol, e })
-        await sleep(1000)
         if (isDev()) {
             throw e
         }
+        logger.condErr({ exchange, symbol, e })
+        await sleep(1000)
         // console.log('条件委托出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
