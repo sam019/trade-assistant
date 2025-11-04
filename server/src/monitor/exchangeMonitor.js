@@ -421,6 +421,7 @@ class ExchangeModel {
             balance: this.balance,
             positions: this.positions,
             orders: this.orders,
+            TESTNET: this.TESTNET,
         }))
         this.accountCbMap.add(cb)
         return () => {

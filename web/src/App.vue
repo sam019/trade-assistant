@@ -819,13 +819,14 @@ export default {
         @favorite="toggleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
     <Login v-if="showLogin" @submit="handleLogin"></Login>
     <div v-else>
-        <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px;">
+        <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px; position: relative;">
             <!-- 选择交易所 -->
             <el-col style="flex-basis: 200px">
                 <el-select v-model="exchange">
                     <el-option v-for="item in exchanges" :key="item" :label="item" :value="item"></el-option>
                 </el-select>
             </el-col>
+            <div v-if="exchangeAccount.TESTNET" class="TESTNET">TESTNET</div>
         </el-row>
         <el-row align="middle" justify="space-between"
             style="height: 60px; border-bottom: 2px solid gray; position: sticky; top: 0; z-index: 99; background: black !important;"
@@ -1028,6 +1029,12 @@ export default {
     width: 8px;
     height: 8px;
     border-radius: 4px;
+}
+.TESTNET {
+    position: absolute;
+    right: 0;
+    top: 0;
+    color: orange;
 }
 </style>
 <style>
