@@ -132,16 +132,16 @@ export default async function createInversePerpMarketOrder(data, options = {}) {
         createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
         return
     }
-    console.log('创建币本位市价单', exchange, symbol, `${params.quantity}(contract)`, `leverage: ${realLeverage}`)
+    console.log(`创建币本位市价单 ${exchange} ${symbol} ${params.quantity}(contract) leverage: ${realLeverage}`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    console.log('下单成功', result.filled, result.cost)
+    console.log(`下单成功 filled:${result.filled} amount:${result.amount} cost:${result.cost}`)
     await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT
-        const order = orderWatcher.creatOrder(sltpParams)
+        const sltpOrder = orderWatcher.creatOrder(sltpParams)
         if (!options.skipSLTPOrderSave) {
-            await order
+            result._sltp = await sltpOrder
         }
     }
     return result

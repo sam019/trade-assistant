@@ -274,26 +274,29 @@ export default {
         async handleConfirmOrder() {
             this.showConfirm = false
             const loading = ElLoading.service()
-            // TODO 弹框确认
+            const params = {
+                exchange: this.exchange,
+                symbol: this.market.symbol,
+                type: this.orderType,
+                side: this.orderSide,
+                amount: this.orderAmount,
+                unit: this.orderAmountUnit,
+                usePct: this.orderUsePct,
+                amountPct: this.orderAmountPct,
+                withSLTP: this.orderWithSLTP,
+                reduceOnly: this.reduceOnly,
+                tpPrice: this.tpPrice,
+                slPrice: this.slPrice,
+                triggerPrice: this.triggerPrice,
+                leverage: this.leverage,
+                id: this.orderId,
+                // __force: true,
+            }
             try {
-                const result = await service.createOrder({
-                    exchange: this.exchange,
-                    symbol: this.market.symbol,
-                    type: this.orderType,
-                    side: this.orderSide,
-                    amount: this.orderAmount,
-                    unit: this.orderAmountUnit,
-                    usePct: this.orderUsePct,
-                    amountPct: this.orderAmountPct,
-                    withSLTP: this.orderWithSLTP,
-                    reduceOnly: this.reduceOnly,
-                    tpPrice: this.tpPrice,
-                    slPrice: this.slPrice,
-                    triggerPrice: this.triggerPrice,
-                    leverage: this.leverage,
-                    id: this.orderId,
-                    // __force: true,
-                })
+                const { _sltp } = await service.createOrder(params)
+                if (_sltp) {
+                    this.exchangeAccount.orders[this.marketType].push(_sltp)
+                }
                 this.resetForm(true)
                 this.$message({
                     message: '下单成功',
