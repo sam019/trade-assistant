@@ -295,6 +295,9 @@ export default {
             try {
                 const { _sltp } = await service.createOrder(params)
                 if (_sltp) {
+                    if (!this.exchangeAccount.orders[this.marketType]) {
+                        this.exchangeAccount.orders[this.marketType] = []
+                    }
                     this.exchangeAccount.orders[this.marketType].push(_sltp)
                 }
                 this.resetForm(true)

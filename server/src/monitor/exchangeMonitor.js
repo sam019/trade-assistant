@@ -69,7 +69,11 @@ class ExchangeModel {
         this.positions = []
         this.positionSymbols = []
         this.leverages = []
-        this.orders = []
+        this.orders = {
+            spot: [],
+            linear: [],
+            inverse: [],
+        }
         this.tickersCbSymbolMap = new Map() // 保存onTickersUpdate接收的订阅函数，key为回调函数，value为订阅的symbols
         this.awaitTickersUpdateCb = new Map() // 保存awaitTickersUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
         this.awaitPositionsUpdateCb = new Map() // 保存awaitPositionsUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
