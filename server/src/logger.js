@@ -1,7 +1,7 @@
 import log4js from 'log4js'
 import _ from 'lodash-es'
-import { ORDER_SIDES } from '../../share/const.js'
-import { checkSymbol } from '../../share/utils.js'
+import { ORDER_SIDES } from 'share/const.js'
+import { checkSymbol } from 'share/utils.js'
 import bot from './bot.js'
 
 // 配置日志记录器

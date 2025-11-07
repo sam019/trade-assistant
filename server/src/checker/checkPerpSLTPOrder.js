@@ -1,6 +1,6 @@
 import Decimal from 'decimal.js'
-import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
-import { checkSymbol, isDev, sleep } from '../../../share/utils.js'
+import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from 'share/const.js'
+import { checkSymbol, isDev, sleep } from 'share/utils.js'
 import service from '../service/index.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'

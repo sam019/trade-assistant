@@ -4,7 +4,7 @@ import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
-import { isDev, isMobileDevice } from '../../share/utils'
+import { isDev, isMobileDevice } from 'share/utils'
 import './style.css'
 import App from './App.vue'
 

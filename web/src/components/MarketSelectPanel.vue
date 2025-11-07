@@ -1,7 +1,7 @@
 <script>
 import { debounce } from "lodash"
 
-import { MARKET_TYPES } from '../../../share/const'
+import { MARKET_TYPES } from 'share/const'
 
 export default {
     props: {

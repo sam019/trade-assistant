@@ -1,6 +1,6 @@
 <script>
 import Decimal from 'decimal.js'
-import { STABLE_COINS } from '../../../share/const'
+import { STABLE_COINS } from 'share/const'
 // TODO 用tickers获取last，并计算价值
 
 export default {

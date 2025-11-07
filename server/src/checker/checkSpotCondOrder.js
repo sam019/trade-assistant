@@ -4,8 +4,8 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 // import { orderModel } from '../database/db.js'
 import service from '../service/index.js'
-import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from '../../../share/const.js'
-import { checkSymbol, isDev, sleep } from '../../../share/utils.js'
+import { ORDER_SIDES, ORDER_AMOUNT_TYPES, ORDER_STATES } from 'share/const.js'
+import { checkSymbol, isDev, sleep } from 'share/utils.js'
 import logger from '../logger.js'
 
 function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol, cSymbol }) {

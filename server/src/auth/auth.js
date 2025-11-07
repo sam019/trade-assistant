@@ -6,7 +6,7 @@ import {
 } from 'hono/cookie'
 import fs from 'fs'
 
-import { isDev } from '../../../share/utils.js'
+import { isDev } from 'share/utils.js'
 
 const hash = crypto.createHash('sha256')
 const cookieKey = 'test'

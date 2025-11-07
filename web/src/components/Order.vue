@@ -1,7 +1,7 @@
 <script>
 import Decimal from 'decimal.js'
-import { ORDER_AMOUNT_TYPES, ORDER_SIDES, ORDER_TYPES, POSITION_SIDES } from '../../../share/const'
-import { checkSymbol } from '../../../share/utils'
+import { ORDER_AMOUNT_TYPES, ORDER_SIDES, ORDER_TYPES, POSITION_SIDES } from 'share/const'
+import { checkSymbol } from 'share/utils'
 
 export default {
     inject: ['positions'],

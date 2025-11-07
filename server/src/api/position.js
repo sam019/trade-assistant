@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
-import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from '../../../share/const.js'
-import { checkSymbol } from '../../../share/utils.js'
+import { POSITION_SIDES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from 'share/const.js'
+import { checkSymbol } from 'share/utils.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 // import { orderModel } from "../database/db";

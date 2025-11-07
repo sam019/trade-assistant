@@ -1,8 +1,8 @@
 import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
-import { getPrecisionLength, checkSymbol } from '../../../share/utils.js'
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from 'share/const.js'
+import { getPrecisionLength, checkSymbol } from 'share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建合约条件委托（条件委托负责买）

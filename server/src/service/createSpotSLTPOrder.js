@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from '../../../share/const.js'
-import { getPrecisionLength, checkSymbol } from '../../../share/utils.js'
+import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from 'share/const.js'
+import { getPrecisionLength, checkSymbol } from 'share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建现货止盈止损委托（止盈止损委托负责卖）

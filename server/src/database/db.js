@@ -1,6 +1,6 @@
 
 import mongoose from 'mongoose'
-import { isDev } from '../../../share/utils.js'
+import { isDev } from 'share/utils.js'
 
 /* 委托订单 */
 const orderSchema = new mongoose.Schema({

@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 
 import { getExchangeMonitor  } from '../monitor/exchangeMonitor.js'
-import { sleep } from '../../../share/utils.js'
+import { sleep } from 'share/utils.js'
 
 const app = new Hono()
 

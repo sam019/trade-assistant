@@ -9,8 +9,8 @@ import checkPerpSLTPOrder from '../checker/checkPerpSLTPOrder.js'
 import checkSpotCondOrder from '../checker/checkSpotCondOrder.js'
 import checkPerpCondOrder from '../checker/checkPerpCondOrder.js'
 
-import { ORDER_TYPES } from '../../../share/const.js'
-import { checkSymbol } from '../../../share/utils.js'
+import { ORDER_TYPES } from 'share/const.js'
+import { checkSymbol } from 'share/utils.js'
 import logger from '../logger.js'
 class Monitor {
     /* 后台监控主函数 */

@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js'
 
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, TWAP_INTERVAL, ORDER_STATES } from '../../../share/const.js'
-import { getPrecisionLength, sleep, isDev, checkSymbol } from '../../../share/utils.js'
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, TWAP_INTERVAL, ORDER_STATES } from 'share/const.js'
+import { getPrecisionLength, sleep, isDev, checkSymbol } from 'share/utils.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import logger from '../logger.js'

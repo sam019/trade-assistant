@@ -1,6 +1,6 @@
 <script>
-import { POSITION_SIDES, MARGIN_MODES } from '../../../share/const'
-import { checkSymbol } from '../../../share/utils'
+import { POSITION_SIDES, MARGIN_MODES } from 'share/const'
+import { checkSymbol } from 'share/utils'
 
 export default {
     props: {

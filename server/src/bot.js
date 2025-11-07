@@ -2,7 +2,7 @@ import TelegramBot  from 'node-telegram-bot-api'
 import fs from 'fs'
 
 import logger from './logger.js'
-import { isDev } from '../../share/utils.js'
+import { isDev } from 'share/utils.js'
 
 let token, myChatId
 if (isDev()) {

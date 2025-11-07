@@ -1,6 +1,6 @@
 import { orderModel } from '../database/db.js'
-import { ORDER_STATES } from '../../../share/const.js'
-import { checkSymbol } from '../../../share/utils.js'
+import { ORDER_STATES } from 'share/const.js'
+import { checkSymbol } from 'share/utils.js'
 import logger from '../logger.js'
 
 export class OrderWatcher {

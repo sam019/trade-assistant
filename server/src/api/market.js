@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 
 import { favouriteMarketsModel } from "../database/db.js"
 import { getExchangeMonitor  } from '../monitor/exchangeMonitor.js'
-import { sleep } from '../../../share/utils.js'
+import { sleep } from 'share/utils.js'
 
 const app = new Hono()
 

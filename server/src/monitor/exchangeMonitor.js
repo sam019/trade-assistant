@@ -4,8 +4,8 @@ import fs from 'fs'
 
 import orderWatcher from './orderMonitor.js'
 import { SUPPORTED_EXCHANGES } from '../config.js'
-import { MARKET_TYPES, ORDER_STATES } from '../../../share/const.js'
-import { checkSymbol, sleep, isDev } from '../../../share/utils.js'
+import { MARKET_TYPES, ORDER_STATES } from 'share/const.js'
+import { checkSymbol, sleep, isDev } from 'share/utils.js'
 import logger from '../logger.js'
 
 const exchangeModels = {}
