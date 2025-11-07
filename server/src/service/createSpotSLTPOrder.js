@@ -1,7 +1,9 @@
 import Decimal from 'decimal.js'
-import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
+
 import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from 'share/const.js'
 import { getPrecisionLength, checkSymbol } from 'share/utils.js'
+
+import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建现货止盈止损委托（止盈止损委托负责卖）
@@ -33,8 +35,7 @@ export default async function createSpotSLTPOrder(data) {
         params.unit = ORDER_AMOUNT_TYPES.BASE
     }
     
-    const lastTicker = await getExchangeMonitor(exchange).awaitTickersUpdate([symbol])
-    const lastPrice = lastTicker[0] && lastTicker[0].last || 0
+    const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
     
     if (slPrice) {
         if (slPrice < lastPrice) {

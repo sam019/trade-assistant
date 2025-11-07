@@ -1,8 +1,9 @@
 import Decimal from 'decimal.js'
 
-import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from 'share/const.js'
+import { ORDER_TYPES, ORDER_AMOUNT_TYPES } from 'share/const.js'
 import { getPrecisionLength, checkSymbol } from 'share/utils.js'
+
+import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 export default async function createSpotConditionOrder(data) {
@@ -33,8 +34,7 @@ export default async function createSpotConditionOrder(data) {
         params.unit = ORDER_AMOUNT_TYPES.QUOTE
     }
     
-    const lastTicker = await getExchangeMonitor(exchange).awaitTickersUpdate([symbol])
-    const lastPrice = lastTicker[0] && lastTicker[0].last || 0
+    const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
     
     if (triggerPrice < lastPrice) {
         params.triggerPrice = triggerPrice

@@ -5,7 +5,7 @@ import fs from 'fs'
 import orderWatcher from './orderMonitor.js'
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES, ORDER_STATES } from 'share/const.js'
-import { checkSymbol, sleep, isDev } from 'share/utils.js'
+import { checkSymbol, sleep, isDev, withTimeout } from 'share/utils.js'
 import logger from '../logger.js'
 
 const exchangeModels = {}
@@ -209,6 +209,7 @@ class ExchangeModel {
                 if (!_.isEqual(positionSymbols, this.positionSymbols)) {
                     this.positionSymbols = positionSymbols
                     this.leverages = await this.fetchLeverages(positionSymbols)
+                    // console.log('this.leverages', this.leverages)
                 }
                 this.positions.forEach(pos => {
                     pos.leverage = this.leverages[pos.symbol]
@@ -277,7 +278,11 @@ class ExchangeModel {
         return [...result[0], ...result[1]]
     }
 
-    async fetchLeverages(symbols = []) {
+    async fetchLeverages(_symbols = []) {
+        let symbols = _symbols
+        if (!Array.isArray(_symbols)) {
+            symbols = [_symbols]
+        }
         const linearSymbols = []
         const inverseSymbols = []
         new Set(symbols).forEach(symbol => {
@@ -293,6 +298,9 @@ class ExchangeModel {
             inverseSymbols.length && this.exchange.fetchLeverages(inverseSymbols, { subType: MARKET_TYPES.INVERSE }),
         ])
         const leverages = result.reduce((a, b) => ({ ...a, ...b }), {})
+        if (!Array.isArray(_symbols)) {
+            return leverages[_symbols]
+        }
         // console.log('fetchLeverages', leverages);
         return leverages
     }
@@ -440,8 +448,19 @@ class ExchangeModel {
         }
     }
 
-    async awaitTickersUpdate(symbols = [], needRefresh = false) {
-        return new Promise((res, rej) => {
+    async awaitTickersUpdate(_symbols = [], needRefresh = false) {
+        return withTimeout(new Promise((_res, rej) => {
+            let symbols = _symbols
+            if (!Array.isArray(_symbols)) {
+                symbols = [_symbols]
+            }
+            const res = (r) => {
+                if (!Array.isArray(_symbols)) {
+                    _res(r[0])
+                } else {
+                    _res(r)
+                }
+            }
             if (!needRefresh) {
                 const r = symbols.reduce((a, b) => this.tickers[b] ? a.concat(this.tickers[b]) : a, [])
                 // console.log('awaitTickersUpdate', symbols, r)
@@ -450,11 +469,22 @@ class ExchangeModel {
                 }
             }
             this.awaitTickersUpdateCb.set([res, rej], symbols)
-        })
+        }), 1000 * 10)
     }
 
-    async awaitPositionsUpdate(symbols = [], needRresh = false) {
-        return new Promise((res, rej) => {
+    async awaitPositionsUpdate(_symbols = [], needRresh = false) {
+        return withTimeout(new Promise((_res, rej) => {
+            let symbols = _symbols
+            if (!Array.isArray(_symbols)) {
+                symbols = [_symbols]
+            }
+            const res = (r) => {
+                if (!Array.isArray(_symbols)) {
+                    _res(r[0])
+                } else {
+                    _res(r)
+                }
+            }
             if (!needRresh) {
                 const r = this.positions.filter(pos => symbols.includes(pos.symbol))
                 // console.log('awaitTickersUpdate', symbols, r)
@@ -463,7 +493,7 @@ class ExchangeModel {
                 }
             }
             this.awaitPositionsUpdateCb.set([res, rej], symbols)
-        })
+        }), 1000 * 10)
     }
 
     // async awaitAccountUpdate() {}

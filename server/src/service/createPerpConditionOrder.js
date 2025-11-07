@@ -1,8 +1,9 @@
 import Decimal from 'decimal.js'
 
-import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from 'share/const.js'
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES } from 'share/const.js'
 import { getPrecisionLength, checkSymbol } from 'share/utils.js'
+
+import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建合约条件委托（条件委托负责买）
@@ -18,8 +19,7 @@ export default async function createPerpConditionOrder(data) {
         throw new Error('错误: 交易对无效')
     }
     
-    const lastTicker = await getExchangeMonitor(exchange).awaitTickersUpdate([symbol])
-    const lastPrice = lastTicker[0] && lastTicker[0].last || 0
+    const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
     
     if (side === ORDER_SIDES.BUY ? triggerPrice >= lastPrice : triggerPrice <= lastPrice) {
         throw new Error(`无效的触发价格 ${triggerPrice} ${lastPrice}`)

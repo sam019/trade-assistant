@@ -9,14 +9,21 @@ export function checkSymbol(symbol) {
     if (!match) {
         throw new Error('invalid symbol')
     }
-    return {
+    const cSymbol = {
         isSpot: !match[3],
         isLinear: match[3] === match[2],
         isInverse: match[3] === match[1],
         base: match[1],
         quote: match[2],
-        contract: match[3],
     }
+    if (cSymbol.isLinear) {
+        cSymbol.contractBase = cSymbol.base
+        cSymbol.contractQuote = cSymbol.quote
+    } else if (cSymbol.isInverse) {
+        cSymbol.contractBase = cSymbol.quote
+        cSymbol.contractQuote = cSymbol.base
+    }
+    return cSymbol
 }
 
 export async function sleep(time = 0, signTime = 0) {
@@ -68,3 +75,11 @@ export function isMobileDevice() {
 //         minQuote,
 //     }
 // }
+
+export function withTimeout(promise, ms, timeoutError = new Error('Promise timed out')) {
+    const timeout = new Promise((resolve, reject) => {
+        setTimeout(() => reject(timeoutError), ms)
+    })
+
+    return Promise.race([promise, timeout])
+}

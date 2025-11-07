@@ -1,53 +1,164 @@
 import Decimal from 'decimal.js'
 
+import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES, TWAP_INTERVAL, ORDER_STATES } from 'share/const.js'
+import { getPrecisionLength, sleep, isDev } from 'share/utils.js'
+
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES, TWAP_INTERVAL } from 'share/const.js'
-import { getPrecisionLength, sleep } from 'share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import logger from '../logger.js'
 
-export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market }) {
+export async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market }) {
     const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
-    const quantityStep = Math.max(new Decimal(params.quantity).div(stepNum).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber(), market.precision.amount)
+    const { reduceOnly, quantity: totalAmount } = params
+    logger.info(`开始 合约TWAP ${exchange} ${symbol} ${side} 总数量:${totalAmount}(张) 总时长:${totalMinute}(分钟) 限价:${priceLimit || '无'}`)
 
-    let remainQuantity = params.quantity, sltpOrder
+    const twapState = {
+        exchange,
+        symbol,
+        side,
+        totalAmount,
+        filledAmount: 0,
+        unit: ORDER_AMOUNT_TYPES.CONTRACT,
+        totalMinute,
+        priceLimit,
+        state: ORDER_STATES.OPENING,
+    }
+    const exchangeMonitor = getExchangeMonitor(exchange)
+    exchangeMonitor.updateTWAPOrder(twapState)
 
-    while (remainQuantity > 0) {
-        const stepParmas = {
-            reduceOnly,
-            quantity: remainQuantity < new Decimal(quantityStep).mul(2).toNumber() ? remainQuantity : quantityStep,
-        }
-        try {
-            console.log(`创建市价单(TWAP): ${exchange} ${symbol} quantity:${stepParmas.quantity}`)
+    const precision = getPrecisionLength(market.precision.amount)
+    
+    let remainAmount = totalAmount
+    let sltpOrder
+    
+    setTimeout(async () => {
+        while (remainAmount > 0) {
             const sign = Date.now()
-            const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, stepParmas)
-            // todo 向前端推送twap进度
-            remainQuantity -= result.filled
-            // await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
-            if (withSLTP) {
-                if (!sltpOrder) {
-                    sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT })
-                } else {
-                    sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: sltpOrder.amount + result.filled })
+            try {
+                if (!exchangeMonitor.getTWAPOrder(symbol)) {
+                    logger.info('TWAP订单已取消, 终止TWAP')
+                    break
                 }
+
+                let lastPrice
+                if (reduceOnly) {
+                    ({ markPrice: lastPrice } = await exchangeMonitor.awaitPositionsUpdate(symbol))
+                } else {
+                    ({ last: lastPrice } = await exchangeMonitor.awaitTickersUpdate(symbol))
+                }
+
+                const realMinQuantity = Math.max(
+                    market.limits.amount.min,
+                    market.limits.cost?.min ? new Decimal(market.limits.cost.min).div(lastPrice).toDecimalPlaces(precision, Decimal.ROUND_UP).toNumber() : 0,
+                )
+
+                const amountStep = Math.max(
+                    new Decimal(params.quantity).div(stepNum).toDecimalPlaces(precision).toNumber(),
+                    realMinQuantity,
+                )
+
+                // 合约带有sltp的twap订单只能是加仓单，因为减仓单不支持sltp
+                if (!reduceOnly && withSLTP && sltpParams.slPrice) {
+                    let isSLTriggered = false
+                    if (side === ORDER_SIDES.BUY) {
+                        if (lastPrice < sltpParams.slPrice) {
+                            isSLTriggered = true
+                        }
+                    } else {
+                        if (lastPrice > sltpParams.slPrice) {
+                            isSLTriggered = true
+                        }
+                    }
+                    // 越过止损价，停止twap
+                    if (isSLTriggered) {
+                        logger.info('止损已触发, 终止TWAP')
+                        break
+                    }
+                }
+
+                if (priceLimit) {
+                    let isPriceOverLimit = false
+                    if (side === ORDER_SIDES.BUY) {
+                        // 做多/平空 价格要比limit低
+                        if (lastPrice > priceLimit) {
+                            isPriceOverLimit = true
+                        }
+                    } else {
+                        // 做空/平多 价格要比limit高
+                        if (lastPrice < priceLimit) {
+                            isPriceOverLimit = true
+                        }
+                    }
+                    if (isPriceOverLimit) {
+                        logger.info(`价格(${lastPrice})超过TWAP限价(${priceLimit}), 暂停TWAP`)
+                        twapState.state = ORDER_STATES.SUSPEND
+                        exchangeMonitor.updateTWAPOrder(twapState)
+                        await sleep(TWAP_INTERVAL, sign)
+                        continue
+                    }
+                }
+
+                const stepParmas = {
+                    reduceOnly,
+                    quantity: (remainAmount < new Decimal(amountStep).mul(2).toNumber()) ? remainAmount : amountStep,
+                }
+
+                logger.info(`创建合约市价单(TWAP) ${exchange} ${symbol} ${side} 数量:${stepParmas.quantity}(张)`)
+                const result = await exchangeMonitor.exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, stepParmas)
+                logger.info(`市价单(TWAP)成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(张)`)
+                // todo 向前端推送twap进度
+                remainAmount = new Decimal(remainAmount).sub(result.filled).toNumber()
+                logger.info(`剩余数量:${remainAmount}(张)`)
+                twapState.filledAmount = new Decimal(twapState.filledAmount).add(result.filled).toNumber()
+                // await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+
+                if (withSLTP) {
+                    if (!sltpOrder) {
+                        sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: twapState.filledAmount, unit: ORDER_AMOUNT_TYPES.CONTRACT })
+                    } else {
+                        sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: twapState.filledAmount })
+                    }
+                }
+
+                if (!remainAmount) {
+                    twapState.state = ORDER_STATES.RESOLVED
+                    exchangeMonitor.updateTWAPOrder(twapState)
+                    logger.info('TWAP已完成')
+                    break
+                }
+                if (remainAmount < realMinQuantity) {
+                    twapState.state = ORDER_STATES.RESOLVED
+                    exchangeMonitor.updateTWAPOrder(twapState)
+                    logger.info('TWAP剩余数量不满足最小成交数量, 终止TWAP')
+                    break
+                }
+                
+                exchangeMonitor.updateTWAPOrder(twapState)
+                
+                await sleep(TWAP_INTERVAL, sign)
+            } catch (e) {
+                if (isDev()) {
+                    throw e
+                }
+                logger.error('createTWAPOrder error: ', e.message)
+                await sleep(TWAP_INTERVAL, sign)
             }
-            await sleep(TWAP_INTERVAL, sign)
-        } catch (e) {
-            logger.error('createTWAPOrder error: ', e.message)
-            throw e
         }
+    })
+    return {
+        _twap: twapState,
     }
 }
 
 // 创建U本位合约市价单
 export default async function createLinearPerpMarketOrder(data, options = {}) {
-    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, useTWAP, totalMinute } = data
+    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, useTWAP, totalMinute, priceLimit } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
-    const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
+    const position = await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
     // 如果当前有仓位并且仓位方向和下单放下相反，判断为减仓单
     const isReduce = !!position && ((side === ORDER_SIDES.BUY && position.side === POSITION_SIDES.SHORT) || (side === ORDER_SIDES.SELL && position.side === POSITION_SIDES.LONG))
 
-    const { longLeverage: realLeverage } = Object.values(await getExchangeMonitor(exchange).fetchLeverages([symbol]))[0]
+    const { longLeverage: realLeverage } = await getExchangeMonitor(exchange).fetchLeverages(symbol)
     if (leverage) {
         if (leverage !== realLeverage) {
             throw new Error('错误: 杠杆参数不一致')
@@ -61,9 +172,12 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
     if (reduceOnly !== isReduce) {
         throw new Error('错误：前后端增减仓逻辑协调错误')
     }
-    const tickers = await getExchangeMonitor(exchange).awaitTickersUpdate([symbol])
-    // console.log('ticker', tickers[0])
-    const last = tickers[0] && tickers[0].last || 0
+    let lastPrice
+    if (reduceOnly) {
+        ({ markPrice: lastPrice } = await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol))
+    } else {
+        ({ last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol))
+    }
     const sltpParams = {
         exchange,
         symbol,
@@ -78,62 +192,58 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
         }
         if (slPrice) {
             if (side === ORDER_SIDES.BUY) {
-                if (slPrice < last) {
+                if (slPrice < lastPrice) {
                     sltpParams.slPrice = slPrice
                 } else {
-                    throw new Error(`无效的止损价格 sl:${slPrice} last:${last}`)
+                    throw new Error(`无效的止损价格 止损:${slPrice} 最新:${lastPrice}`)
                 }
             } else {
-                if (slPrice > last) {
+                if (slPrice > lastPrice) {
                     sltpParams.slPrice = slPrice
                 } else {
-                    throw new Error(`无效的止损价格 sl:${slPrice} last:${last}`)
+                    throw new Error(`无效的止损价格 止损:${slPrice} 最新:${lastPrice}`)
                 }
             }
         }
         if (tpPrice) {
             if (side === ORDER_SIDES.BUY) {
-                if (tpPrice > last) {
+                if (tpPrice > lastPrice) {
                     sltpParams.tpPrice = tpPrice
                 } else {
-                    throw new Error(`无效的止盈价格 tp:${slPrice} last:${last}`)
+                    throw new Error(`无效的止盈价格 止盈:${slPrice} 最新:${lastPrice}`)
                 }
             } else {
-                if (tpPrice < last) {
+                if (tpPrice < lastPrice) {
                     sltpParams.tpPrice = tpPrice
                 } else {
-                    throw new Error(`无效的止盈价格 tp:${slPrice} last:${last}`)
+                    throw new Error(`无效的止盈价格 止盈:${slPrice} 最新:${lastPrice}`)
                 }
             }
         }
     }
-    // console.log('last', last)
-    // const precisionLength = (Number(market.precision.amount) + 1).toString().split('.')[1].length;
     
-    
-    
-    const precisionLength = getPrecisionLength(market.precision.amount)
+    const precision = getPrecisionLength(market.precision.amount)
     const params = {
-        reduceOnly,
+        reduceOnly, // binance特殊字段, 防止减仓单加仓到反向
     }
 
     if (unit === ORDER_AMOUNT_TYPES.CONTRACT) {
         // 按张下单，目前只有止盈止损单会触发
-        params.quantity = new Decimal(amount).toDecimalPlaces(precisionLength).toNumber()
+        params.quantity = new Decimal(amount).toDecimalPlaces(precision).toNumber()
     } else if (isReduce) {
         if (usePct) {
             // 百分比减仓
-            params.quantity = new Decimal(position.contracts).mul(amountPct).div(100).toDecimalPlaces(precisionLength).toNumber()
+            params.quantity = new Decimal(position.contracts).mul(amountPct).div(100).toDecimalPlaces(precision).toNumber()
             // console.log('params.quantity', params.quantity)
         } else if (unit === ORDER_AMOUNT_TYPES.QUOTE) {
             // U本位绝对数量减仓
-            const qtoAmountStep = new Decimal(market.contractSize).mul(market.precision.amount).mul(last)
-            const quantity = new Decimal(amount).div(qtoAmountStep).floor().mul(qtoAmountStep).div(market.contractSize).div(last).toDecimalPlaces(precisionLength).toNumber()
+            const qtoAmountStep = new Decimal(market.contractSize).mul(market.precision.amount).mul(lastPrice)
+            const quantity = new Decimal(amount).div(qtoAmountStep).floor().mul(qtoAmountStep).div(market.contractSize).div(lastPrice).toDecimalPlaces(precision).toNumber()
             params.quantity = quantity
         } else {
             // 币本位绝对数量减仓
             const baseAmountStep = new Decimal(market.contractSize).mul(market.precision.amount)
-            const quantity = new Decimal(amount).div(baseAmountStep).floor().mul(baseAmountStep).toDecimalPlaces(precisionLength).toNumber()
+            const quantity = new Decimal(amount).div(baseAmountStep).floor().mul(baseAmountStep).toDecimalPlaces(precision).toNumber()
             params.quantity = quantity
         }
     } else {
@@ -141,42 +251,56 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
         if (unit === ORDER_AMOUNT_TYPES.BASE) {
             // 币本位绝对数量建仓
             const baseAmountStep = new Decimal(market.contractSize).mul(market.precision.amount)
-            const quantity = new Decimal(amount).div(baseAmountStep).floor().mul(baseAmountStep).mul(realLeverage).toDecimalPlaces(precisionLength).toNumber()
+            const quantity = new Decimal(amount).mul(realLeverage).div(baseAmountStep).floor().mul(baseAmountStep).toDecimalPlaces(precision).toNumber()
             params.quantity = quantity
         } else {
             // 可开仓位按quote计价的数量的最小粒度
-            const qtoAmountStep = new Decimal(market.contractSize).mul(market.precision.amount).mul(last)
-            // console.log('qtoAmountStep', market.contractSize, market.precision.amount, last, qtoAmountStep.toNumber())
+            const qtoAmountStep = new Decimal(market.contractSize).mul(market.precision.amount).mul(lastPrice)
+            // console.log('qtoAmountStep', market.contractSize, market.precision.amount, lastPrice, qtoAmountStep.toNumber())
             let maxStepAmount // 最小粒度的数量
             if (usePct) {
                 // 百分比数量建仓
                 const balance = getExchangeMonitor(exchange).balance[market.subType][market.quote].free
                 // console.log('maxStepAmount', getExchangeMonitor(exchange).balance, balance, amountPct, qtoAmountStep.toNumber())
-                maxStepAmount = new Decimal(balance).mul(amountPct).div(100).div(qtoAmountStep).floor()
+                maxStepAmount = new Decimal(balance).mul(amountPct).div(100).mul(realLeverage).div(qtoAmountStep).floor()
             } else {
                 // U本位绝对数量建仓
                 // console.log(new Decimal(amount).div(qtoAmountStep).toNumber())
-                maxStepAmount = new Decimal(amount).div(qtoAmountStep).floor()
+                maxStepAmount = new Decimal(amount).mul(realLeverage).div(qtoAmountStep).floor()
             }
-            // console.log('quantity', maxStepAmount.toNumber(), qtoAmountStep.toNumber(), market.contractSize, last)
+            // console.log('quantity', maxStepAmount.toNumber(), qtoAmountStep.toNumber(), market.contractSize, lastPrice)
             // 逻辑正确，quantity参数是计算杠杆后的开仓数量，所以要把要开的保证金乘以杠杆
-            const quantity = maxStepAmount.mul(qtoAmountStep).div(market.contractSize).div(last).mul(realLeverage).toDecimalPlaces(precisionLength).toNumber()
+            const quantity = maxStepAmount.mul(qtoAmountStep).div(market.contractSize).div(lastPrice).toDecimalPlaces(precision).toNumber()
             // console.log('quantity', quantity)
             params.quantity = quantity
         }
     }
-    // console.log('createLinearPerpMarketOrder quantity', params.quantity, precisionLength); 
+
+    const realMinQuantity = Math.max(
+        market.limits.amount.min,
+        new Decimal(market.limits.cost.min).div(lastPrice).toDecimalPlaces(precision, Decimal.ROUND_UP).toNumber(),
+    )
+    if (params.quantity < realMinQuantity) {
+        throw new Error('下单数量不满足最低成交量')
+    }
+    // console.log('createLinearPerpMarketOrder quantity', params.quantity, precision); 
     if (useTWAP) {
         if (totalMinute < 1) {
             throw new Error('TWAP总时间不能少于1分钟')
         }
-        return createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
+        if (!reduceOnly && withSLTP) {
+            // 合约带止损的twap只有加仓订单, 减仓订单没有止盈止损选项
+            if (sltpParams.tpPrice && priceLimit && sltpParams.tpPrice < priceLimit) {
+                throw new Error('TWAP限价不能大于止盈价格')
+            }
+        }
+        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, market })
     }
 
-    console.log(`创建U本位市价单 ${exchange} ${symbol} ${params.quantity}(contract) leverage: ${realLeverage}`)
+    logger.info(`创建合约市价单 ${exchange} ${symbol} ${side} ${params.quantity}(张) 杠杆:${realLeverage}x`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    console.log(`下单成功 filled:${result.filled} amount:${result.amount} cost:${result.cost}`)
-    await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+    logger.info(`市价单成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(张)`)
+    await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT

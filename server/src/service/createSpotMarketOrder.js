@@ -2,6 +2,7 @@ import Decimal from 'decimal.js'
 
 import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, TWAP_INTERVAL, ORDER_STATES } from 'share/const.js'
 import { getPrecisionLength, sleep, isDev, checkSymbol } from 'share/utils.js'
+
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import logger from '../logger.js'
@@ -11,7 +12,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
     const totalAmount = params.quoteOrderQty || params.quantity
     const unit = params.quoteOrderQty ? ORDER_AMOUNT_TYPES.QUOTE : ORDER_AMOUNT_TYPES.BASE
     const unitName = market[unit]
-    logger.info(`开始 现货TWAP 总数量:${totalAmount}(${unitName}) 总时长:${totalMinute}(分钟) 限价:${priceLimit || '无'}`)
+    logger.info(`开始 现货TWAP ${exchange} ${symbol} ${side} 总数量:${totalAmount}(${unitName}) 总时长:${totalMinute}(分钟) 限价:${priceLimit || '无'}`)
 
     const twapState = {
         exchange,
@@ -38,28 +39,26 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                     break
                 }
                 
-                const lastPrice = (await getExchangeMonitor(exchange).awaitTickersUpdate([symbol]))[0]?.last
+                const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
 
-                if (withSLTP) {
+                if (side === ORDER_SIDES.BUY && withSLTP) {
                 // 现货带有sltp的twap订单只能是买单，因为卖单不支持sltp
-                    if (side === ORDER_SIDES.BUY) {
-                        if (sltpParams.slPrice && lastPrice < sltpParams.slPrice) {
-                            // 跌破止损价，停止twap
-                            logger.info('止损已触发, 终止TWAP')
-                            break
-                        }
+                    if (sltpParams.slPrice && lastPrice < sltpParams.slPrice) {
+                        // 跌破止损价，停止twap
+                        logger.info('止损已触发, 终止TWAP')
+                        break
                     }
                 }
                 if (priceLimit) {
-                    let isPriceTooVolatile = false
+                    let isPriceOverLimit = false
                     if (side === ORDER_SIDES.BUY) {
                         if (lastPrice > priceLimit) {
-                            isPriceTooVolatile = true
+                            isPriceOverLimit = true
                         } else if (lastPrice < priceLimit) {
-                            isPriceTooVolatile = true
+                            isPriceOverLimit = true
                         }
                     }
-                    if (isPriceTooVolatile) {
+                    if (isPriceOverLimit) {
                         logger.info(`价格(${lastPrice})超过TWAP限价(${priceLimit}), 暂停TWAP`)
                         twapState.state = ORDER_STATES.SUSPEND
                         exchangeMonitor.updateTWAPOrder(twapState)
@@ -71,19 +70,19 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                 const quotePrecision = getPrecisionLength(market.precision.price)
 
                 const stepParmas = {}
+                const realMinQuote = Math.max(
+                    market.limits.cost.min,
+                    new Decimal(market.limits.amount.min).mul(lastPrice).toDecimalPlaces(quotePrecision, Decimal.ROUND_UP).toNumber(),
+                )
+                const realMinBase = Math.max(
+                    market.limits.amount.min,
+                    new Decimal(market.limits.cost.min).div(lastPrice).toDecimalPlaces(basePrecision, Decimal.ROUND_UP).toNumber(),
+                )
                 if (params.quoteOrderQty) {
-                    const realMinQuote = Math.max(
-                        market.limits.cost.min,
-                        new Decimal(market.limits.amount.min).mul(lastPrice).toDecimalPlaces(quotePrecision, Decimal.ROUND_UP).toNumber(),
-                    )
                     const amountStep = Math.max(new Decimal(params.quoteOrderQty).div(stepNum).toDecimalPlaces(quotePrecision).toNumber(), realMinQuote)
                     stepParmas.quoteOrderQty = (remainAmount < new Decimal(amountStep).mul(2).toNumber()) ? remainAmount : amountStep
                     // console.log('realMinQuote', realMinQuote, amountStep)
                 } else {
-                    const realMinBase = Math.max(
-                        market.limits.amount.min,
-                        new Decimal(market.limits.cost.min).div(lastPrice).toDecimalPlaces(basePrecision, Decimal.ROUND_UP).toNumber(),
-                    )
                     const amountStep = Math.max(new Decimal(params.quantity).div(stepNum).toDecimalPlaces(basePrecision).toNumber(), realMinBase)
                     stepParmas.quantity = (remainAmount < new Decimal(amountStep).mul(2).toNumber()) ? remainAmount : amountStep
                     // console.log('realMinBase', realMinBase, amountStep)
@@ -96,13 +95,13 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
 
                 remainAmount = new Decimal(remainAmount).sub(params.quoteOrderQty ? result.cost : result.filled).toNumber()
                 logger.info(`剩余数量:${remainAmount}(${unitName})`)
-                twapState.filledAmount = twapState.totalAmount - remainAmount
+                twapState.filledAmount = new Decimal(twapState.totalAmount).sub(remainAmount).toNumber()
                 
                 if (withSLTP) {
                     if (!sltpOrder) {
-                        sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: result.filled, unit: ORDER_AMOUNT_TYPES.BASE })
+                        sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: twapState.filledAmount, unit: ORDER_AMOUNT_TYPES.BASE })
                     } else {
-                        sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: sltpOrder.amount + result.filled })
+                        sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: twapState.filledAmount })
                     }
                 }
 
@@ -113,8 +112,8 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                     break
                 }
                 if (
-                    (params.quantity && remainAmount < market.limits.amount.min)
-                    || (params.quoteOrderQty && remainAmount < market.limits.cost.min)
+                    (params.quantity && remainAmount < realMinBase)
+                    || (params.quoteOrderQty && remainAmount < realMinQuote)
                 ) {
                     twapState.state = ORDER_STATES.RESOLVED
                     exchangeMonitor.updateTWAPOrder(twapState)
@@ -167,7 +166,7 @@ export default async function createSpotMarketOrder(data, options = {}) {
     } else {
         params.quantity = new Decimal(amount).toDecimalPlaces(basePrecision).toNumber()
     }
-    const lastPrice = (await getExchangeMonitor(exchange).awaitTickersUpdate([symbol]))[0]?.last
+    const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
     
     const realMinBase = Math.max(
         market.limits.amount.min,
@@ -217,13 +216,13 @@ export default async function createSpotMarketOrder(data, options = {}) {
                 }
             }
         }
-        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market })
+        return createTWAPOrder({ exchange, symbol, side, params, basePrecision, quotePrecision, withSLTP, sltpParams, totalMinute, priceLimit, market })
     }
     
     logger.info(`创建现货市价单 ${exchange} ${symbol} ${side} ${params.quantity || params.quoteOrderQty}(${params.quantity ? market.base : market.quote})`)
     // logger.createMarketOrder({ exchange, symbol, side, amount: params.quantity || params.quoteOrderQty, unitName: params.quantity ? market.base : market.quote })
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
-    logger.info(`市价单成交 ${side} 成交价格:${result.averagePrice} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(${market.base})`)
+    logger.info(`市价单成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(${market.base})`)
     // logger.markOrderSucc({ exchange, symbol, side, result, market })
 
     if (withSLTP) {

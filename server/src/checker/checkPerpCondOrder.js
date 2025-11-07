@@ -90,7 +90,7 @@ export default async function checkPerpCondOrder(order, ticker) {
             }
             logger.condSucc({ exchange, symbol, side: params.side, cost: result.cost, price: result.price, unit: ORDER_AMOUNT_TYPES.CONTRACT })
             // console.log(`条件委托结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 买入数量:${result.filled}`)
-            await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+            await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)
             // orderWatcher.unmarkOrderDealing(_id);

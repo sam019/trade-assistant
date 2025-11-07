@@ -1,8 +1,9 @@
 import Decimal from 'decimal.js'
 
-import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
-import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from 'share/const.js'
+import { ORDER_TYPES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from 'share/const.js'
 import { getPrecisionLength } from 'share/utils.js'
+
+import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建合约止盈止损委托（止盈止损委托负责卖）
@@ -11,7 +12,7 @@ export default async function createPerpSLTPOrder(data) {
     const { linear, inverse } = getExchangeMonitor(exchange).markets
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol)
     const position = getExchangeMonitor(exchange).positions?.find(pos => pos.symbol === symbol)
-    console.log('sltp', slPrice, tpPrice, position?.markPrice)
+    // console.log('sltp', slPrice, tpPrice, position?.markPrice)
     if (!market) {
         throw new Error('错误: 交易对无效')
     }

@@ -576,7 +576,7 @@ export default {
             return this.tickers[this.market.symbol] || {}
         },
         lastPrice() {
-            return typeof this.ticker?.close === 'number' ? new Decimal(this.ticker.close).toLocaleString() : '-'
+            return typeof this.ticker?.close === 'number' ? this.ticker.close.toLocaleString() : '-'
         },
         buyLabel() {
             return this.isSpotMarket ? '买入' : '买入/做多'
@@ -874,9 +874,9 @@ export default {
             if (this.isSpotMarket) {
                 return this.orderSide === ORDER_SIDES.BUY
             }
-            if (this.isLinearPerpMarket || this.isInversePerpMarket) {
-                return !this.reduceOnly
-            }
+            // if (this.isLinearPerpMarket || this.isInversePerpMarket) {
+            //     return !this.reduceOnly
+            // }
             return !this.reduceOnly
         },
     },

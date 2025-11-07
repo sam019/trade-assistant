@@ -17,7 +17,7 @@ export class OrderWatcher {
     }
     async init() {
         this.fetch()
-        orderModel.watch().on('change', async (change) => {
+        orderModel.watch().on('change', async () => {
             // console.log('change', change);
             // 订单变化时更新
             await this.fetch()

@@ -120,9 +120,9 @@ app.post('/getLeverage', async function getLeverage(c) {
     const body = await c.req.json()
     const { exchange, symbol } = body
     const exchangeMonitor = getExchangeMonitor(exchange)
-    const result = await exchangeMonitor.fetchLeverages([symbol])
+    const result = await exchangeMonitor.fetchLeverages(symbol)
     // console.log('getLeverage', result)
-    return c.json(Object.values(result)[0])
+    return c.json(result)
 })
 
 app.post('/setLeverage', async function getLeverage(c) {

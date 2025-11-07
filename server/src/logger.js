@@ -1,9 +1,13 @@
 import log4js from 'log4js'
 import _ from 'lodash-es'
 import { ORDER_SIDES } from 'share/const.js'
-import { checkSymbol } from 'share/utils.js'
+import { checkSymbol, isDev } from 'share/utils.js'
 import bot from './bot.js'
 
+const appenders = ['console']
+if (!isDev()) {
+    appenders.push('fileFilter')
+}
 // 配置日志记录器
 log4js.configure({
     appenders: {
@@ -22,14 +26,14 @@ log4js.configure({
                 pattern: "[%d] [%p] - %m",
             },
         },
-        errFileFilter: {
+        fileFilter: {
             type: 'logLevelFilter',
             appender: 'file',
-            level: 'error',
+            level: 'warn',
         },
     },
     categories: {
-        default: { appenders: ['console', 'errFileFilter'], level: 'trace' }, // 设置日志级别和输出方式
+        default: { appenders, level: 'trace' }, // 设置日志级别和输出方式
     },
 })
 

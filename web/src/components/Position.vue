@@ -60,11 +60,11 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">持仓数量({{ cSymbol.contract }}/{{ cSymbol.quote }})</div>
+                <div class="label">持仓数量({{ cSymbol.contractBase }}/{{ cSymbol.contractQuote }})</div>
                 <div class="value">{{ position.contracts * position.contractSize }}/{{ position.notional }}</div>
             </div>
             <div>
-                <div class="label">保证金({{ cSymbol.quote }})</div>
+                <div class="label">保证金({{ cSymbol.contractQuote }})</div>
                 <div class="value">{{ position.initialMargin }}</div>
             </div>
             <div>
