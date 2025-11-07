@@ -7,22 +7,33 @@ import bot from './bot.js'
 // 配置日志记录器
 log4js.configure({
     appenders: {
-        out: { type: "stdout" }, // 输出到控制台
-        app: {
-            type: "file", // 使用 file appender 进行文件输出
-            filename: "logs/app.log", // 日志文件路径（不需要扩展名，自动添加）
-            pattern: "yyyy-MM-dd", // 日志文件轮换的模式，按天轮换
+        console: {
+            type: 'stdout',
+        }, // 输出到控制台
+        file: {
+            type: 'file', // 使用 file appender 进行文件输出
+            filename: 'logs/app.log', // 日志文件路径（不需要扩展名，自动添加）
+            pattern: 'yyyy-MM-dd', // 日志文件轮换的模式，按天轮换
             alwaysIncludePattern: true, // 始终在文件名中添加日期后缀
             daysToKeep: 7, // 保留最近 7 天的日志文件
             compress: true, // 启用日志文件压缩（.gz 格式）
+            layout: {
+                type: "pattern",
+                pattern: "[%d] [%p] - %m",
+            },
+        },
+        errFileFilter: {
+            type: 'logLevelFilter',
+            appender: 'file',
+            level: 'error',
         },
     },
     categories: {
-        default: { appenders: ["out", "app"], level: "info" }, // 设置日志级别和输出方式
+        default: { appenders: ['console', 'errFileFilter'], level: 'trace' }, // 设置日志级别和输出方式
     },
 })
 
-const _logger =log4js.getLogger()
+const _logger = log4js.getLogger()
 
 function getSLTPOperName(symbol, side, isZh = false) {
     const cSymbol = checkSymbol(symbol)
@@ -37,7 +48,7 @@ function getSLTPOperName(symbol, side, isZh = false) {
     }
 }
 
-function getCondOperName(symbol, side, isZh = false) {
+function getOperName(symbol, side, isZh = false) {
     const cSymbol = checkSymbol(symbol)
     if (cSymbol.isSpot) {
         return !isZh ? 'BUY' : '买入'
@@ -57,6 +68,15 @@ class Logger {
     order(amount) {
         _logger.info(`Orders changed, amount:${amount}`)
     }
+
+    // createMarketOrder({ exchange, symbol, side, amount, unitName }) {
+    //     _logger.info(`创建现货市价单 ${exchange} ${symbol} ${getOperName(symbol, side)} ${amount}(${unitName})`)
+    // }
+
+    // markOrderSucc({ exchange, symbol, side, result, market }) {
+    //     console.log(result)
+    //     logger.info(`现货市价单成交 ${exchange} ${getOperName(symbol, side)} 成交价格:${result.average} 成交额(${market.quote}):${result.cost} 成交量(${market.base}):${result.filled}`)
+    // }
 
     _lastUpdateTime = {}
     getLastUpdateTime() {
@@ -121,11 +141,11 @@ class Logger {
     }
 
     cond({ exchange, symbol, side, lastPrice, triggerPrice }) {
-        _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}`)
+        _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}`)
     }
     condSucc({ exchange, symbol, side, cost, price }) {
-        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getCondOperName(symbol, side)}, volume:${cost}, price:${price}`)
-        bot.pushMessage(`条件委托 成功\n${exchange}, ${symbol}\n${getCondOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
+        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, volume:${cost}, price:${price}`)
+        bot.pushMessage(`条件委托 成功\n${exchange}, ${symbol}\n${getOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
     }
     condErr({ exchange, symbol, e }) {
         _logger.error(`Condition Order FAILED on ${exchange}, ${symbol}`, e)

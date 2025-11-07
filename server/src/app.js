@@ -16,6 +16,7 @@ import positionRoute from "./api/position.js"
 import transferRoute from "./api/transfer.js"
 import { authRouter, httpAuth } from "./auth/auth.js"
 import socket from "./socket/socket.js"
+import logger from "./logger.js"
 
 // 设置Decimal的默认舍入模式
 Decimal.config({ rounding: Decimal.ROUND_DOWN })
@@ -55,7 +56,7 @@ async function init() {
         .route("/auth", authRouter)
 
     app.onError((err, c) => {
-        console.error(err.message)
+        logger.error(err)
         return c.json(err.message, 500)
     })
     const serverParams = {

@@ -1,7 +1,7 @@
 import Decimal from 'decimal.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_AMOUNT_TYPES, ORDER_TYPES } from '../../../share/const.js'
-import { getPrecisionLength } from '../../../share/utils.js'
+import { getPrecisionLength, checkSymbol } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建现货止盈止损委托（止盈止损委托负责卖）
@@ -24,9 +24,8 @@ export default async function createSpotSLTPOrder(data) {
     }
     // usePct为true时，换算为绝对值
     if (usePct) {
-        const currencyMatch = symbol.match(/(\w+)\/(\w+)/)
-        // console.log('currencyMatch', currencyMatch[1], getExchangeMonitor(exchange).balance.spot['BTC']);
-        const balance = getExchangeMonitor(exchange).balance.spot[currencyMatch[1]]?.free
+        const cSymbol = checkSymbol(order.symbol)
+        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]?.free
         if (!balance) {
             throw new Error('止盈止损数量错误：没有余额')
         }

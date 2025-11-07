@@ -7,7 +7,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 import { createTWAPOrder } from './createLinearPerpMarketOrder.js'
 
 export default async function createInversePerpMarketOrder(data, options = {}) {
-    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, withTWAP, totalMinute } = data
+    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, useTWAP, totalMinute } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
     // 如果当前有仓位并且仓位方向和下单放下相反，判断为减仓单
@@ -125,17 +125,16 @@ export default async function createInversePerpMarketOrder(data, options = {}) {
         }
     }
     // console.log('createLinearPerpMarketOrder quantity', params.quantity, precisionLength); 
-    if (withTWAP) {
+    if (useTWAP) {
         if (totalMinute < 1) {
             throw new Error('TWAP总时间不能少于1分钟')
         }
-        createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
-        return
+        return createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
     }
     console.log(`创建币本位市价单 ${exchange} ${symbol} ${params.quantity}(contract) leverage: ${realLeverage}`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
     console.log(`下单成功 filled:${result.filled} amount:${result.amount} cost:${result.cost}`)
-    await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+    // await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT

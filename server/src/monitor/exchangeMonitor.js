@@ -4,7 +4,7 @@ import fs from 'fs'
 
 import orderWatcher from './orderMonitor.js'
 import { SUPPORTED_EXCHANGES } from '../config.js'
-import { MARKET_TYPES } from '../../../share/const.js'
+import { MARKET_TYPES, ORDER_STATES } from '../../../share/const.js'
 import { checkSymbol, sleep, isDev } from '../../../share/utils.js'
 import logger from '../logger.js'
 
@@ -69,7 +69,12 @@ class ExchangeModel {
         this.positions = []
         this.positionSymbols = []
         this.leverages = []
-        this.orders = []
+        this.orders = {
+            spot: [],
+            linear: [],
+            inverse: [],
+        }
+        this.twapOrders = {} // 保存在进行的该交易所twap订单状态
         this.tickersCbSymbolMap = new Map() // 保存onTickersUpdate接收的订阅函数，key为回调函数，value为订阅的symbols
         this.awaitTickersUpdateCb = new Map() // 保存awaitTickersUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
         this.awaitPositionsUpdateCb = new Map() // 保存awaitPositionsUpdate方法调用产生的promise，key为promise的[resolve，reject], value为symbols
@@ -300,7 +305,7 @@ class ExchangeModel {
         })
     }
 
-    _triggerAccountCbs = _.throttle(function (key) {
+    _triggerAccountCbs = _.debounce(function (key) {
         // console.log('_triggerAccountCbs', key, Object.keys(this[key]))
         this.accountCbMap.forEach(cb => cb({ [key]: this[key] }))
     }, 100)
@@ -321,7 +326,10 @@ class ExchangeModel {
                 // console.log(this.tickersCbSymbolMap)
                 this.tickersCbSymbolMap.entries().forEach(([cb, cbSymbols]) => {
                     const r = cbSymbols.reduce((a, b) => Object.assign(a, { [b]: tickers[b] }), {})
-                    // console.log('tickers cb', cbSymbols, Object.keys(r));
+                    // console.log('tickers cb', cbSymbols.length, Object.keys(r).length)
+                    // if (Object.keys(r).length === cbSymbols.length) {
+                    //     cb(r)
+                    // }
                     cb(r)
                 })
                 this.awaitTickersUpdateCb.entries().forEach(([cb, symbols]) => {
@@ -371,10 +379,10 @@ class ExchangeModel {
             (Array.isArray(cbSymbols) ? cbSymbols : [cbSymbols]).forEach((symbol) => {
                 // console.log('this.exchange.markets[symbol]', !!this.exchange.markets[symbol])
                 if (!this.exchange.markets[symbol]) return
-                const match = symbol.match(/(\w+)\/(\w+):?(\w+)?/)
-                if (!match[3]) {
+                const cSymbol = checkSymbol(symbol)
+                if (cSymbol.isSpot) {
                     symbolsNeedWatch.spot.add(symbol)
-                } else if (match[3] === match[2]) {
+                } else if (cSymbol.isLinear) {
                     symbolsNeedWatch.linear.add(symbol)
                 } else {
                     symbolsNeedWatch.inverse.add(symbol)
@@ -402,8 +410,10 @@ class ExchangeModel {
     }
 
     onTickersUpdate(symbols = [], cb) {
+        // console.trace('onTickersUpdate', symbols.length)
         this.tickersCbSymbolMap.set(cb, Array.from(new Set(symbols)))
         return () => {
+            // console.log('unsub ticker')
             this.tickersCbSymbolMap.delete(cb)
         }
     }
@@ -421,6 +431,7 @@ class ExchangeModel {
             balance: this.balance,
             positions: this.positions,
             orders: this.orders,
+            twapOrders: this.twapOrders,
             TESTNET: this.TESTNET,
         }))
         this.accountCbMap.add(cb)
@@ -430,42 +441,46 @@ class ExchangeModel {
     }
 
     async awaitTickersUpdate(symbols = [], needRefresh = false) {
-        if (!needRefresh) {
-            const r = symbols.reduce((a, b) => this.tickers[b] ? a.concat(this.tickers[b]) : a, [])
-            // console.log('awaitTickersUpdate', symbols, r)
-            if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
-                return r
+        return new Promise((res, rej) => {
+            if (!needRefresh) {
+                const r = symbols.reduce((a, b) => this.tickers[b] ? a.concat(this.tickers[b]) : a, [])
+                // console.log('awaitTickersUpdate', symbols, r)
+                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                    res(r)
+                }
             }
-        }
-        
-        let res, rej
-        const promise = new Promise((_res, _rej) => {
-            res = _res
-            rej = _rej
+            this.awaitTickersUpdateCb.set([res, rej], symbols)
         })
-        this.awaitTickersUpdateCb.set([res, rej], symbols)
-        return promise
     }
 
     async awaitPositionsUpdate(symbols = [], needRresh = false) {
-        if (!needRresh) {
-            const r = this.positions.filter(pos => symbols.includes(pos.symbol))
-            // console.log('awaitTickersUpdate', symbols, r)
-            if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
-                return r
+        return new Promise((res, rej) => {
+            if (!needRresh) {
+                const r = this.positions.filter(pos => symbols.includes(pos.symbol))
+                // console.log('awaitTickersUpdate', symbols, r)
+                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                    res(r)
+                }
             }
-        }
-        
-        let res, rej
-        const promise = new Promise((_res, _rej) => {
-            res = _res
-            rej = _rej
+            this.awaitPositionsUpdateCb.set([res, rej], symbols)
         })
-        this.awaitPositionsUpdateCb.set([res, rej], symbols)
-        return promise
     }
 
     // async awaitAccountUpdate() {}
+
+    async updateTWAPOrder(order) {
+        this.twapOrders[order.symbol] = order
+        this._triggerAccountCbs('twapOrders')
+    }
+
+    async getTWAPOrder(symbol) {
+        return this.twapOrders[symbol]
+    }
+
+    async closeTWAPOrder(symbol) {
+        delete this.twapOrders[symbol]
+        this._triggerAccountCbs('twapOrders')
+    }
 }
 
 function getExchangeMonitor(exchange) {

@@ -1,5 +1,6 @@
 <script>
 import { POSITION_SIDES, MARGIN_MODES } from '../../../share/const'
+import { checkSymbol } from '../../../share/utils'
 
 export default {
     props: {
@@ -24,22 +25,11 @@ export default {
         marginModeLabel() {
             return this.position.marginType === MARGIN_MODES.CROSS ? '全仓' : '逐仓'
         },
-        typeLabel() {
-            return this.isLinear ? 'U本位' : '币本位'
-        },
-        baseQuoteType() {
-            const match = this.position.symbol.match(/(\w+)\/(\w+):(\w+)/)
-            // console.log('baseQuoteType', match);
-            return match.slice(1)
-        },
-        isLinear() {
-            return this.baseQuoteType[2] === this.baseQuoteType[1]
-        },
-        quoteCurrency() {
-            return this.baseQuoteType[2]
-        },
-        contractCurrency() {
-            return this.isLinear ? this.baseQuoteType[0] : this.baseQuoteType[1]
+        // typeLabel() {
+        //     return this.cSymbol.isLinear ? 'U本位' : '币本位'
+        // },
+        cSymbol() {
+            return checkSymbol(this.position.symbol)
         },
     },
 }
@@ -51,7 +41,7 @@ export default {
                 style="margin-right: 5px;">
                 {{ sideLabel }}
             </el-tag>
-            <el-tag size="" style="font-size: 14px;" :type="isLinear ? 'primary' : 'warning'"
+            <el-tag size="" style="font-size: 14px;" :type="cSymbol.isLinear ? 'primary' : 'warning'"
                 @click="$emit('jumpMarket', position.symbol)">{{ position.symbol }}</el-tag>
             <!-- <el-tag size="small" :style="{ color: isLinear ? '' : 'warning' }">{{ typeLabel }}</el-tag> -->
             <span style="color: gray;">{{ marginModeLabel }}</span>
@@ -59,7 +49,7 @@ export default {
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <div class="label">未实现盈亏 ({{ quoteCurrency }})</div>
+                <div class="label">未实现盈亏 ({{ cSymbol.quote }})</div>
                 <div :class="['pnl', position.unrealizedPnl > 0 ? 'profit' : 'loss']">{{ position.unrealizedPnl }}</div>
             </div>
             <div>
@@ -70,11 +60,11 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">持仓数量({{ contractCurrency }}/{{ quoteCurrency }})</div>
+                <div class="label">持仓数量({{ cSymbol.contract }}/{{ cSymbol.quote }})</div>
                 <div class="value">{{ position.contracts * position.contractSize }}/{{ position.notional }}</div>
             </div>
             <div>
-                <div class="label">保证金({{ quoteCurrency }})</div>
+                <div class="label">保证金({{ cSymbol.quote }})</div>
                 <div class="value">{{ position.initialMargin }}</div>
             </div>
             <div>
@@ -84,15 +74,15 @@ export default {
         </div>
         <div class="row">
             <div>
-                <div class="label">开仓价格({{ baseQuoteType[1] }})</div>
+                <div class="label">开仓价格({{ cSymbol.quote }})</div>
                 <div class="value">{{ position.entryPrice }}</div>
             </div>
             <div>
-                <div class="label">标记价格({{ baseQuoteType[1] }})</div>
+                <div class="label">标记价格({{ cSymbol.quote }})</div>
                 <div class="value">{{ position.markPrice }}</div>
             </div>
             <div>
-                <div class="label">强平价格({{ baseQuoteType[1] }})</div>
+                <div class="label">强平价格({{ cSymbol.quote }})</div>
                 <div class="value">{{ position.liquidationPrice }}</div>
             </div>
         </div>

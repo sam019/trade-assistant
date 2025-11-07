@@ -20,7 +20,7 @@ class Socket {
             if (document.visibilityState === 'hidden') {
                 if (this.socket) {
                     this.socket.close()
-                    this.socket = null
+                    // this.socket = null
                     // this.connected = false
                 }
             }
@@ -84,6 +84,7 @@ class Socket {
 
     recoverSubscribe() {
         if (!this.connected) return
+        // console.log('recoverSubscribe', this.symbols)
         if (this.tickerSubCb) {
             this.subscribeTickers(this.exchange, this.symbols, this.tickerSubCb)
         }
@@ -102,7 +103,7 @@ class Socket {
     subscribeTickers(exchange, symbols, cb) {
         if (!this.connected) return
         if (this.tickerSubCb) {
-            this.socket.off('tickersUpdate')
+            this.unsubscribeTickers()
         }
         this.tickerSubCb = cb
         this.exchange = exchange
@@ -121,7 +122,7 @@ class Socket {
     subscribeAccount(exchange, cb) {
         if (!this.connected) return
         if (this.accountSubCb) {
-            this.socket.off('accountUpdate')
+            this.unsubscribeAccount()
         }
         this.accountSubCb = cb
         this.exchange = exchange

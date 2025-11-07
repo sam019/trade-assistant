@@ -8,6 +8,7 @@ export const ORDER_TYPES = {
     MARKET: 'market',
     SLTP: 'sltp',
     CONDITION: 'condition',
+    TWAP: 'twap',
 }
 
 export const MARGIN_MODES = {
@@ -44,6 +45,7 @@ export const ORDER_STATES = {
     OPENING: 'opening',
     RESOLVED: 'resolved',
     CLOSED: 'closed',
+    SUSPEND: 'suspend',
 }
 
 export const TWAP_INTERVAL = 6000

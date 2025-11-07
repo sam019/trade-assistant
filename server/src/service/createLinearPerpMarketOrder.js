@@ -23,7 +23,7 @@ export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, para
             const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, stepParmas)
             // todo 向前端推送twap进度
             remainQuantity -= result.filled
-            await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
+            // await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
             if (withSLTP) {
                 if (!sltpOrder) {
                     sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: result.filled, unit: ORDER_AMOUNT_TYPES.CONTRACT })
@@ -41,7 +41,7 @@ export async function createTWAPOrder({ exchange, symbol, side, reduceOnly, para
 
 // 创建U本位合约市价单
 export default async function createLinearPerpMarketOrder(data, options = {}) {
-    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, withTWAP, totalMinute } = data
+    const { exchange, symbol, side, amount, leverage, amountPct, usePct, unit, withSLTP, slPrice, tpPrice, reduceOnly = false, useTWAP, totalMinute } = data
     const market = getExchangeMonitor(exchange).exchange.markets[symbol]
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
     // 如果当前有仓位并且仓位方向和下单放下相反，判断为减仓单
@@ -166,12 +166,11 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
         }
     }
     // console.log('createLinearPerpMarketOrder quantity', params.quantity, precisionLength); 
-    if (withTWAP) {
+    if (useTWAP) {
         if (totalMinute < 1) {
             throw new Error('TWAP总时间不能少于1分钟')
         }
-        createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
-        return
+        return createTWAPOrder({ exchange, symbol, side, reduceOnly, params, withSLTP, sltpParams, totalMinute, market })
     }
 
     console.log(`创建U本位市价单 ${exchange} ${symbol} ${params.quantity}(contract) leverage: ${realLeverage}`)

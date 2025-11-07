@@ -1,5 +1,6 @@
 import { orderModel } from '../database/db.js'
 import { ORDER_STATES } from '../../../share/const.js'
+import { checkSymbol } from '../../../share/utils.js'
 import logger from '../logger.js'
 
 export class OrderWatcher {
@@ -55,11 +56,11 @@ export class OrderWatcher {
                     },
                 }
             }
-            const match = order.symbol.match(/(\w+)\/(\w+):?(\w+)?/)
-            if (!match[3]) {
+            const cSymbol = checkSymbol(order.symbol)
+            if (cSymbol.isSpot) {
                 ordersGroupByExchange[order.exchange].spot.symbols.add(order.symbol)
                 ordersGroupByExchange[order.exchange].spot.orders.push(order)
-            } else if (match[3] === match[2]) {
+            } else if (cSymbol.isLinear) {
                 ordersGroupByExchange[order.exchange].linear.symbols.add(order.symbol)
                 ordersGroupByExchange[order.exchange].linear.orders.push(order)
             } else {

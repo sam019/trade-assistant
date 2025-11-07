@@ -2,7 +2,7 @@ import Decimal from 'decimal.js'
 
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import { ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, POSITION_SIDES } from '../../../share/const.js'
-import { getPrecisionLength } from '../../../share/utils.js'
+import { getPrecisionLength, checkSymbol } from '../../../share/utils.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 export default async function createSpotConditionOrder(data) {
@@ -24,9 +24,8 @@ export default async function createSpotConditionOrder(data) {
     }
     // usePct为true时，换算为绝对值
     if (usePct) {
-        const currencyMatch = symbol.match(/(\w+)\/(\w+)/)
-        // console.log('currencyMatch', currencyMatch[1], getExchangeMonitor(exchange).balance.spot['BTC']);
-        const balance = getExchangeMonitor(exchange).balance.spot[currencyMatch[2]]?.free
+        const cSymbol = checkSymbol(order.symbol)
+        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]?.free
         if (!balance) {
             throw new Error('条件委托数量错误：没有余额')
         }

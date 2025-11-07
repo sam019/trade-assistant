@@ -1,6 +1,6 @@
 import axios from 'axios'
 import { apiURL } from '../config'
-import socket from './socket'
+// import socket from './socket'
 
 const service = axios.create({
     baseURL: apiURL,

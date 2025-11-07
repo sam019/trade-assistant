@@ -2,7 +2,7 @@
   "name": "server",
   "type": "module",
   "scripts": {
-    "dev": "tsx --env-file=.env --watch src/app.js",
+    "dev": "node --env-file=.env --watch src/app.js",
     "build": "tsc src/app.js",
     "build-testnet": "tsc --env-file=.env.production.test",
     "start": "node dist/index.js --env-file=.env",
@@ -17,6 +17,7 @@
     "log4js": "^6.9.1",
     "mongoose": "^8.18.3",
     "node-telegram-bot-api": "^0.66.0",
+    "share": "workspace:*",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {

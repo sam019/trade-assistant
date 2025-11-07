@@ -7,13 +7,15 @@ import { ElLoading } from 'element-plus'
 import Decimal from 'decimal.js'
 
 import { MARKET_TYPES, ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, MARGIN_MODES, POSITION_SIDES, STABLE_COINS } from '../../share/const'
-import { checkSymbol } from '../../share/utils'
+import { checkSymbol, getPrecisionLength } from '../../share/utils'
 
 import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
 import Position from './components/Position.vue'
 import Order from './components/Order.vue'
 import Login from './components/Login.vue'
+import TwapCheckbox from './components/TwapCheckbox.vue'
+import TwapOrder from './components/TwapOrder.vue'
 
 import * as service from './services/service'
 import socket from './services/socket'
@@ -31,6 +33,8 @@ export default {
         Position,
         Order,
         Login,
+        TwapCheckbox,
+        TwapOrder,
     },
     data() {
         return {
@@ -42,23 +46,38 @@ export default {
             markets: null, // 当前搜索面板展示的交易对
             market: {}, // 当前选择的交易对
             tickers: {}, // 交易对的最新价格
+            tickerTime: null, // ticker的获取时间
+            tickerTimeAgo: null, // 距离最新ticker过了多久
 
+            marginMode: null, // 仓位模式（全仓，逐仓）
+            leverage: null, // 杠杆大小
+
+            orderId: null, // 委托单的id，仅修改委托单时有用
             orderType: ORDER_TYPES.MARKET, // 订单类型
             orderSide: ORDER_SIDES.BUY, // 订单方向
+
             orderAmount: 0, // 订单数量
             orderAmountUnit: ORDER_AMOUNT_TYPES.QUOTE, // 订单数量计价币种
             orderAmountPct: 0, // 订单数量占可用数量的百分比
             orderUsePct: false, // 使用百分比数量代替绝对数量，适用于数量单位总价值为估算的场景，且拖动slide设定数量时
-            orderId: null, // 委托单的id，仅修改委托单时有用
-            marginMode: null, // 仓位模式（全仓，逐仓）
-            leverage: null, // 杠杆大小
+
+            orderUseTWAP: false, // 是否用TWAP下单
+            twapTotalMinute: 1, // TWAP总时间(分钟)
+            twapPriceLimit: null, // TWAP价格限制
+            showConfirm: false, // 下单确认框
+
             orderWithSLTP: false, // 市价单是否带止盈止损
             slPrice: null, // 市价单附带的止损触发价
             tpPrice: null, // 市价单附带的止盈触发价
+            // sltpUseTWAP: false, // 止盈止损时是否使用TWAP
+            // sltpTwapTotalMinut: 1,
+            // sltpTwapPriceLimit: 1,
+
             triggerPrice: null, // 条件委托的触发价
-            showConfirm: false, // 下单确认框
+
+
             showMarketDialog: false, // market搜索框
-            isSocketSuspend: false, // 通过ticker判断数据推送是否已暂停
+            isSocketSuspend: false, // socket是否保持连接
 
             ORDER_TYPES,
             ORDER_SIDES,
@@ -86,6 +105,7 @@ export default {
                 } else {
                     this.initExchangeData(supportedExhcanges[0])
                 }
+                this.refreshTickerAgo()
                 this.showLogin = false
             } catch (e) {
                 console.log(e)
@@ -100,7 +120,7 @@ export default {
                 this.init()
             } catch (e) {
                 console.log(e)
-                
+
             }
         },
         async initExchangeData(exchange) {
@@ -202,6 +222,7 @@ export default {
             }
         },
         async handleMarginModeChange(mode) {
+            const loading = ElLoading.service()
             try {
                 await service.setMarginMode(this.exchange, this.market.symbol, mode)
                 this.marginMode = mode
@@ -215,10 +236,12 @@ export default {
                     message: e?.response?.data?.name,
                     type: 'error',
                 })
+            } finally {
+                loading.close()
             }
         },
         async handleLeverageChange(leverage) {
-            // todo 币本位和u本位参数不一样
+            const loading = ElLoading.service()
             try {
                 await service.setLeverage(this.exchange, this.market.symbol, leverage)
                 this.leverage = leverage
@@ -232,6 +255,8 @@ export default {
                     message: e?.response?.data?.name,
                     type: 'error',
                 })
+            } finally {
+                loading.close()
             }
         },
         // 前端不需要做精确校验
@@ -283,6 +308,9 @@ export default {
                 unit: this.orderAmountUnit,
                 usePct: this.orderUsePct,
                 amountPct: this.orderAmountPct,
+                useTWAP: this.orderUseTWAP,
+                totalMinute: this.twapTotalMinute,
+                priceLimit: this.twapPriceLimit,
                 withSLTP: this.orderWithSLTP,
                 reduceOnly: this.reduceOnly,
                 tpPrice: this.tpPrice,
@@ -295,6 +323,9 @@ export default {
             try {
                 const { _sltp } = await service.createOrder(params)
                 if (_sltp) {
+                    if (!this.exchangeAccount.orders[this.marketType]) {
+                        this.exchangeAccount.orders[this.marketType] = []
+                    }
                     this.exchangeAccount.orders[this.marketType].push(_sltp)
                 }
                 this.resetForm(true)
@@ -317,6 +348,38 @@ export default {
             if (!this.orderAmount) return false
             if (this.orderType === ORDER_TYPES.MARKET) {
                 if (this.orderWithSLTP && !this.slPrice && !this.tpPrice) return false
+                if (this.orderUsePct) {
+                    if (!this.twapTotalMinute) {
+                        return false
+                    }
+                    if (this.twapPriceLimit) {
+                        if (this.isSpotMarket) {
+                            if (this.orderSide === ORDER_SIDES.BUY) {
+                                return this.twapPriceLimit > this.ticker?.last
+                            } else {
+                                return this.twapPriceLimit < this.ticker?.last
+                            }
+                        } else {
+                            if (this.curPosition && this.reduceOnly) {
+                                if (this.orderSide === ORDER_SIDES.BUY) {
+                                    // 平空
+                                    return this.twapPriceLimit < this.curPosition.markPrice
+                                } else {
+                                    // 平多
+                                    return this.twapPriceLimit > this.curPosition.markPrice
+                                }
+                            } else {
+                                if (this.orderSide === ORDER_SIDES.BUY) {
+                                    // 做多
+                                    return this.twapPriceLimit < this.curPosition.markPrice
+                                } else {
+                                    // 做空
+                                    return this.twapPriceLimit > this.curPosition.markPrice
+                                }
+                            }
+                        }
+                    }
+                }
                 return true
             }
             if (this.orderType === ORDER_TYPES.SLTP) {
@@ -328,14 +391,21 @@ export default {
                 if (this.orderWithSLTP && !this.slPrice && !this.tpPrice) return false
                 return true
             }
+            return false
         },
         resetForm(notResetUnit = false) {
             this.orderAmount = null
             this.orderAmountPct = 0
             this.orderUsePct = false
+
+            this.orderUseTWAP = false
+            this.twapTotalMinute = 1
+            this.twapPriceLimit = null
+
             this.orderWithSLTP = false
             this.tpPrice = null
             this.slPrice = null
+
             this.triggerPrice = null
             if (!notResetUnit) {
                 this.orderAmountUnit = ORDER_AMOUNT_TYPES.QUOTE
@@ -376,7 +446,10 @@ export default {
         getPrecisionByUnit(unit) {
             // console.log(this.market?.precision, this.market.precision, unit)
             // console.log(/\d+e-(\d)/.exec('1e-8'))
-            return parseInt(/\d+e-(\d)/.exec(this.market?.precision && this.market.precision[unit] || '1e-8')[1])
+            if (unit === ORDER_AMOUNT_TYPES.BASE) {
+                return getPrecisionLength(this.market?.precision?.amount) || 8
+            }
+            return parseInt(/1e-(\d+)/.exec((this.market?.precision || {}).quote || '1e-8'))[1]
         },
         async handleClosePosition(position) {
             const loading = ElLoading.service()
@@ -478,9 +551,17 @@ export default {
             this.changeMarket(market)
             this.backTop()
         },
+        refreshTickerAgo() {
+            // console.log('tickerTime', new Date(this.tickerTime).toLocaleTimeString())
+            if (this.tickerTime) {
+                this.tickerTimeAgo = Math.floor((Date.now() - this.tickerTime) / 1000)
+                // console.log('this.tickerTimeAgo', this.tickerTimeAgo)
+            }
+            this.tickerAgoTimer = setTimeout(this.refreshTickerAgo, 1000)
+        },
     },
     computed: {
-        orderTypesLabel() {
+        orderTypes() {
             return {
                 [ORDER_TYPES.MARKET]: '市价',
                 [ORDER_TYPES.SLTP]: '止盈止损',
@@ -491,6 +572,7 @@ export default {
             return this.market?.symbol || '-'
         },
         ticker() {
+            // console.log(Object.values(this.tickers).map(t => new Date(t.timestamp).toLocaleString()))
             return this.tickers[this.market.symbol] || {}
         },
         lastPrice() {
@@ -738,7 +820,7 @@ export default {
         },
         orders() {
             const displayOrders = []
-            Object.values(this.exchangeAccount?.orders || {}).forEach(({ orders }) => {
+            Object.values(this.exchangeAccount?.orders || {}).forEach(({ orders = [] }) => {
                 orders.forEach(order => {
                     // console.log(order.symbol, this.market.symbol, order.symbol === this.market.symbol)
                     displayOrders.push(order)
@@ -803,13 +885,19 @@ export default {
             // console.log('symbolsNeedTicker', newVal, oldVal)
             if (_.isEqual(newVal, oldVal)) return
             socket.subscribeTickers(this.exchange, this.symbolsNeedTicker, (tickers) => {
-                // console.log('tickersUpdate', this.symbolsNeedTicker, this.market.symbol, tickers);
-                this.tickers = tickers
+                // console.log('tickersUpdate', Object.keys(tickers).length)
+                if (Object.keys(tickers).length) {
+                    this.tickers = tickers
+                    this.tickerTime = Date.now()
+                }
             })
         },
     },
     mounted() {
         this.init()
+    },
+    beforeUnmount() {
+        clearTimeout(this.tickerAgoTimer)
     },
 }
 </script>
@@ -819,7 +907,8 @@ export default {
         @favorite="toggleMarketFavorite" :markets="markets" @change-market="changeMarket"></MarketSelectPanel>
     <Login v-if="showLogin" @submit="handleLogin"></Login>
     <div v-else>
-        <el-row align="middle" style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px; position: relative;">
+        <el-row align="middle"
+            style="height: 60px; border-bottom: 2px solid gray; padding: 0 10px; position: relative;">
             <!-- 选择交易所 -->
             <el-col style="flex-basis: 200px">
                 <el-select v-model="exchange">
@@ -841,7 +930,9 @@ export default {
                 <div>{{ lastPrice }}</div>
                 <div v-show="priceChanged" :style="{ color: ticker.change >= 0 ? 'green' : 'red' }">{{ priceChanged }}
                 </div>
-                <div class="socket-indicator" :style="{ backgroundColor: isSocketSuspend ? 'red' : 'green' }"></div>
+                <div class="socket-indicator" :class="[isSocketSuspend ? 'red' : 'green']">
+                    <span v-show="tickerTimeAgo">{{ tickerTimeAgo }}</span>
+                </div>
             </el-col>
         </el-row>
         <el-row align="middle" justify="space-between" style="height: 40px; padding: 10px 10px;">
@@ -849,8 +940,7 @@ export default {
             <el-col style="flex-basis: 100px;">
                 <el-select :model-value="orderType" placeholder="Select" style="width: 100px;"
                     @change="handleOrderTypeChange">
-                    <el-option v-for="item in ORDER_TYPES" :key="item" :label="orderTypesLabel[item]"
-                        :value="item"></el-option>
+                    <el-option v-for="(value, key) in orderTypes" :key="key" :label="value" :value="key"></el-option>
                 </el-select>
             </el-col>
             <!-- 合约仓位类型，只支持逐仓 -->
@@ -880,7 +970,7 @@ export default {
             <el-col style="flex-basis: 50%;">
                 <el-button :type="orderSide === ORDER_SIDES.SELL ? 'danger' : ''" style="width: 100%; outline: none;"
                     :disabled="isSideDisabled(ORDER_SIDES.SELL)" @click="handleSideChange(ORDER_SIDES.SELL)">{{
-                    sellLabel
+                        sellLabel
                     }}</el-button>
             </el-col>
         </el-row>
@@ -890,7 +980,7 @@ export default {
             <el-col style="flex-basis: auto; height: 100%;">
                 <template v-if="!Number.isNaN(displayAvaiableOrderAmount)">
                     {{ displayAvaiableOrderAmount }}{{
-                    isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
+                        isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
                 </template>
             </el-col>
         </el-row>
@@ -928,17 +1018,20 @@ export default {
             </el-input>
             <!-- 可下单总数为预估且百分比下单时使用的真实资产数量 -->
             <span v-show="orderUsePct"
-                style="position: absolute; top: 45px; color: white; font-size: 12px; left: 45%; transform: translateX(-50%);">{{
-                realCurrencyAmount }}</span>
+                style="position: absolute; top: 45px; color: white; font-size: 12px; left: 45%; transform: translateX(-50%);">
+                {{ realCurrencyAmount }}</span>
         </div>
         <!-- 下单仓位数量百分比 -->
-        <div style="padding: 10px 10px 10px 20px;">
+        <div class="slide-input">
             <el-slider v-model="orderAmountPct" @change="handleAmountPctChange"
                 :marks="{ 0: '0', 25: '25', 50: '50', 75: '75', 100: '100' }" show-input size="small"
                 :show-tooltip="true" />
         </div>
+        <!-- 下单是否使用TWAP -->
+        <TwapCheckbox v-show="orderType === ORDER_TYPES.MARKET" style="width: 70%;" v-model:checked="orderUseTWAP"
+            v-model:totalMinute="twapTotalMinute" v-model:priceLimit="twapPriceLimit"></TwapCheckbox>
         <!-- 下单是否附带止盈止损 -->
-        <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 10px 10px 0 10px;">
+        <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 0 10px 0 10px;">
             <el-checkbox v-model="orderWithSLTP" label="止盈止损" />
         </div>
         <!-- 合约只减仓 -->
@@ -965,6 +1058,7 @@ export default {
         <!-- 余额/仓位/委托... -->
         <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
             <el-tab-pane label="总览">
+                <TwapOrder v-for="item in exchangeAccount.twapOrders" :key="item.symbol" :order="item"></TwapOrder>
                 <template v-if="curOrders.length">
                     <Order v-for="item in curOrders" :key="item._id" :order="item" @cancel="handleCancelOrder"
                         @edit="handleEditOrder" @jump-market="handleJumpMarket">
@@ -1002,8 +1096,13 @@ export default {
 </template>
 
 <style scoped>
-/* .order-amount-input {
-} */
+.slide-input {
+    padding: 10px 10px 20px 20px;
+
+    :deep(.el-slider__input) {
+        width: 84px;
+    }
+}
 
 .el-input :deep(.el-input__inner) {
     text-align: center;
@@ -1022,22 +1121,41 @@ export default {
         overflow-y: auto;
     }
 }
+
 .socket-indicator {
     position: absolute;
-    right: 10px;
-    top: 4px;
-    width: 8px;
-    height: 8px;
-    border-radius: 4px;
+    right: 15px;
+    top: 0px;
+    height: 10px;
+    line-height: 10px;
+    /* display: flex; */
+    /* align-items: center; */
+    font-size: 12px;
+    color: gray;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        right: -10px;
+        width: 8px;
+        height: 8px;
+        border-radius: 4px;
+    }
+
+    &.red::after {
+        background-color: red;
+    }
+
+    &.green::after {
+        background-color: green;
+    }
 }
+
 .TESTNET {
     position: absolute;
     right: 0;
     top: 0;
     color: orange;
 }
-</style>
-<style>
-/* .order-confirm-box {
-} */
 </style>

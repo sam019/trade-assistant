@@ -90,6 +90,13 @@ app.post('/list', async function listOrder(c) {
     return c.json(result)
 })
 
+app.post('/twap/close', async function closeTWAP(c) {
+    const body = await c.req.json()
+    const { exchange, symbol } = body
+    getExchangeMonitor(exchange).closeTWAPOrder(symbol)
+    return c.text('ok')
+})
+
 app.post('/__forceT', async function __forceT(c) {
     if (process.env.TESTNET) {
         if (!global.__Force) {
