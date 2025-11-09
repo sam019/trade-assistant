@@ -20,7 +20,7 @@ log4js.configure({
             pattern: 'yyyy-MM-dd', // 日志文件轮换的模式，按天轮换
             alwaysIncludePattern: true, // 始终在文件名中添加日期后缀
             daysToKeep: 7, // 保留最近 7 天的日志文件
-            compress: true, // 启用日志文件压缩（.gz 格式）
+            compress: false, // 启用日志文件压缩（.gz 格式）
             layout: {
                 type: "pattern",
                 pattern: "[%d] [%p] - %m",

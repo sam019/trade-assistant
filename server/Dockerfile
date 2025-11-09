@@ -28,7 +28,6 @@ COPY ./server/package.json ./server/
 
 RUN npm install -g pnpm && pnpm install -P
 
-# WORKDIR /app/share
 COPY ./share/ ./share/
 COPY ./server/ ./server/
 
