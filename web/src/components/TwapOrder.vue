@@ -65,8 +65,11 @@ export default {
             return this.order.state === ORDER_STATES.RESOLVED
         },
         toggleLabel() {
-            return this.isOpening ? '暂停' : '开启'
+            return this.order.state === ORDER_STATES.STOPED ? '开启' : '暂停'
         },
+        // allowToggle() {
+        //     return this.order.state !== ORDER_STATES.SUSPEND
+        // },
     },
 }
 </script>

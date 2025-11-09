@@ -497,7 +497,7 @@ export default {
                 this.handleAmountChange(order.amount)
             } else {
                 if (order.unit === ORDER_AMOUNT_TYPES.CONTRACT) {
-                    this.orderAmountUnit = this.isLinearPerpMarket ? this.market.base : this.market.quote
+                    this.orderAmountUnit = ORDER_AMOUNT_TYPES.QUOTE
                     this.handleAmountChange(order.amount * this.market.contractSize)
                 } else {
                     this.orderAmountUnit = order.unit
