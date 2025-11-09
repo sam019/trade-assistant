@@ -25,9 +25,10 @@ services:
         command: --oplogSize 192 --replSet rs0 --bind_ip_all
     server:
         build:
-            context: ./server
-            additional_contexts:
-                - share=./share
+            context: .
+            dockerfile: ./server/Dockerfile
+            # additional_contexts:
+            #     - share=./share
         container_name: ta-server
         restart: unless-stopped
         volumes:
@@ -48,9 +49,10 @@ services:
             - mongo
     web:
         build: 
-            context: ./web
-            additional_contexts:
-                - share=./share
+            context: .
+            dockerfile: ./web/Dockerfile
+            # additional_contexts:
+            #     - share=./share
             args:
                 - NPM_REGISTRY
         container_name: ta-web
