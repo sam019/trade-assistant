@@ -1,4 +1,6 @@
 <script>
+import Decimal from 'decimal.js'
+
 import { POSITION_SIDES, MARGIN_MODES } from 'share/const'
 import { checkSymbol } from 'share/utils'
 
@@ -31,6 +33,12 @@ export default {
         cSymbol() {
             return checkSymbol(this.position.symbol)
         },
+        marginRatio() {
+            return new Decimal(this.position.marginRatio).mul(100).toNumber()
+        },
+        contractAmount() {
+            return new Decimal(this.position.contracts).mul(this.position.contractSize).toNumber()
+        },
     },
 }
 </script>
@@ -61,7 +69,7 @@ export default {
         <div class="row">
             <div>
                 <div class="label">持仓数量({{ cSymbol.contractBase }}/{{ cSymbol.contractQuote }})</div>
-                <div class="value">{{ position.contracts * position.contractSize }}/{{ position.notional }}</div>
+                <div class="value">{{ contractAmount }}/{{ position.notional }}</div>
             </div>
             <div>
                 <div class="label">保证金({{ cSymbol.contractQuote }})</div>
@@ -69,7 +77,7 @@ export default {
             </div>
             <div>
                 <div class="label">保证金比率</div>
-                <div class="value">{{ position.marginRatio * 100 }}%</div>
+                <div class="value">{{ marginRatio }}%</div>
             </div>
         </div>
         <div class="row">
@@ -99,7 +107,7 @@ export default {
 </template>
 <style scoped>
 .position {
-    padding: 10px;
+    padding: 5px 0;
     border-bottom: 1px solid gray;
     text-align: left;
     font-size: 12px;

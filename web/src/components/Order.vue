@@ -86,9 +86,6 @@ export default {
             }
             return this.cSymbol.isLinear ? this.cSymbol.quote : this.cSymbol.base
         },
-        contractCurrency() {
-            return this.cSymbol.isLinear ? this.cSymbol.base : this.cSymbol.quote
-        },
     },
 }
 </script>
@@ -120,8 +117,8 @@ export default {
                 </div>
             </div>
             <div>
-                <el-button plain type="" size="small" style="width: 60px;" @click="$emit('edit', order)">编辑</el-button>
-                <el-button plain type="primary" size="small" style="width: 60px;"
+                <el-button plain type="" size="small" style="width: 40px;" @click="$emit('edit', order)">编辑</el-button>
+                <el-button plain type="primary" size="small" style="width: 40px;"
                     @click="$emit('cancel', order)">撤销</el-button>
             </div>
         </div>
@@ -158,7 +155,7 @@ export default {
             </div>
             <div>
                 <div class="label">委托数量
-                    (<template v-if="!cSymbol.isSpot">{{ contractCurrency }}/</template>{{ quoteCurrency }})
+                    (<template v-if="!cSymbol.isSpot">{{ cSymbol.contractBase }}/</template>{{ quoteCurrency }})
                 </div>
                 <div class="value">{{ orderAmountAsQuote }}</div>
             </div>
@@ -170,7 +167,7 @@ export default {
     font-size: 12px;
     border-bottom: 1px solid gray;
     text-align: left;
-    margin: 5px;
+    padding: 5px 0;
 }
 
 .symbol {

@@ -82,4 +82,14 @@ export async function login(pwd) {
     return response.data
 }
 
+export async function closeTWAPOrder(exchange, symbol) {
+    const response = await service.post('/order/twap/close', { exchange, symbol })
+    return response.data
+}
+
+export async function toggleTWAPOrder(exchange, symbol) {
+    const response = await service.post('/order/twap/toggle', { exchange, symbol })
+    return response.data
+}
+
 // export default service;

@@ -14,7 +14,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
     const unitName = market[unit]
     logger.info(`开始 现货TWAP ${exchange} ${symbol} ${side} 总数量:${totalAmount}(${unitName}) 总时长:${totalMinute}(分钟) 限价:${priceLimit || '无'}`)
 
-    const twapState = {
+    let twapState = {
         exchange,
         symbol,
         side,
@@ -30,13 +30,21 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
 
     let remainAmount = totalAmount
     let sltpOrder
-    setTimeout(async () => {
+    process.nextTick(async () => {
         while (remainAmount > 0) {
             const sign = Date.now()
             try {
-                if (!exchangeMonitor.getTWAPOrder(symbol)) {
+                twapState = exchangeMonitor.getTWAPOrder(symbol)
+                if (!twapState) {
                     logger.info('TWAP订单已取消, 终止TWAP')
                     break
+                }
+
+                if (twapState.state === ORDER_STATES.STOPED) {
+                    // 手动暂停
+                    logger.info('TWAP订单已暂停')
+                    await sleep(TWAP_INTERVAL, sign)
+                    continue
                 }
                 
                 const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
@@ -54,7 +62,9 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                     if (side === ORDER_SIDES.BUY) {
                         if (lastPrice > priceLimit) {
                             isPriceOverLimit = true
-                        } else if (lastPrice < priceLimit) {
+                        }
+                    } else {
+                        if (lastPrice < priceLimit) {
                             isPriceOverLimit = true
                         }
                     }
@@ -208,12 +218,12 @@ export default async function createSpotMarketOrder(data, options = {}) {
         if (totalMinute < 1) {
             throw new Error('TWAP总时间不能少于1分钟')
         }
-        if (withSLTP) {
+        if (withSLTP && priceLimit) {
             // 现货带止损的twap只有买入订单, 卖出订单没有止盈止损选项
-            if (side === ORDER_SIDES.BUY) {
-                if (sltpParams.tpPrice && priceLimit && sltpParams.tpPrice < priceLimit) {
-                    throw new Error('TWAP限价不能大于止盈价格')
-                }
+            if (sltpParams.tpPrice && priceLimit > sltpParams.tpPrice) {
+                throw new Error('TWAP限价不能大于止盈价格')
+            } else if (sltpParams.slPrice && priceLimit < sltpParams.slPrice) {
+                throw new Error('TWAP限价不能小于止盈价格')
             }
         }
         return createTWAPOrder({ exchange, symbol, side, params, basePrecision, quotePrecision, withSLTP, sltpParams, totalMinute, priceLimit, market })

@@ -313,10 +313,11 @@ class ExchangeModel {
         })
     }
 
-    _triggerAccountCbs = _.debounce(function (key) {
+    _triggerAccountCbs(key) {
         // console.log('_triggerAccountCbs', key, Object.keys(this[key]))
+        if (!key) return
         this.accountCbMap.forEach(cb => cb({ [key]: this[key] }))
-    }, 100)
+    }
 
     _triggerPositionsCbs = _.throttle(function () {
         // console.log('_triggerPositionsCbs', this.positionsCbMap)
@@ -464,7 +465,7 @@ class ExchangeModel {
             if (!needRefresh) {
                 const r = symbols.reduce((a, b) => this.tickers[b] ? a.concat(this.tickers[b]) : a, [])
                 // console.log('awaitTickersUpdate', symbols, r)
-                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < (this.fetchInterval * 1.5)) {
                     res(r)
                 }
             }
@@ -488,7 +489,7 @@ class ExchangeModel {
             if (!needRresh) {
                 const r = this.positions.filter(pos => symbols.includes(pos.symbol))
                 // console.log('awaitTickersUpdate', symbols, r)
-                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < 1000) {
+                if (r.length === symbols.length && (Date.now() - (r[0]?.timestamp || Infinity)) < (this.fetchInterval * 1.5)) {
                     res(r)
                 }
             }
@@ -498,17 +499,29 @@ class ExchangeModel {
 
     // async awaitAccountUpdate() {}
 
-    async updateTWAPOrder(order) {
+    updateTWAPOrder(order) {
         this.twapOrders[order.symbol] = order
         this._triggerAccountCbs('twapOrders')
     }
 
-    async getTWAPOrder(symbol) {
+    getTWAPOrder(symbol) {
         return this.twapOrders[symbol]
     }
 
-    async closeTWAPOrder(symbol) {
+    closeTWAPOrder(symbol) {
         delete this.twapOrders[symbol]
+        this._triggerAccountCbs('twapOrders')
+    }
+
+    toggleTWAPOrder(symbol) {
+        if (!this.twapOrders[symbol]) {
+            throw new Error('TWAP订单不存在!')
+        }
+        if (this.twapOrders[symbol].state === ORDER_STATES.OPENING) {
+            this.twapOrders[symbol].state = ORDER_STATES.STOPED
+        } else {
+            this.twapOrders[symbol].state = ORDER_STATES.OPENING
+        }
         this._triggerAccountCbs('twapOrders')
     }
 }

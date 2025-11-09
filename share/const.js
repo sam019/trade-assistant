@@ -46,6 +46,7 @@ export const ORDER_STATES = {
     RESOLVED: 'resolved',
     CLOSED: 'closed',
     SUSPEND: 'suspend',
+    STOPED: 'stoped',
 }
 
 export const TWAP_INTERVAL = 6000

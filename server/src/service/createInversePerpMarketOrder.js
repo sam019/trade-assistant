@@ -148,13 +148,23 @@ export default async function createInversePerpMarketOrder(data, options = {}) {
         if (totalMinute < 1) {
             throw new Error('TWAP总时间不能少于1分钟')
         }
-        if (!reduceOnly && withSLTP) {
+        if (withSLTP && priceLimit) {
             // 合约带止损的twap只有加仓订单, 减仓订单没有止盈止损选项
-            if (sltpParams.tpPrice && priceLimit && sltpParams.tpPrice < priceLimit) {
-                throw new Error('TWAP限价不能大于止盈价格')
+            if (side === ORDER_SIDES.BUY) {
+                if (sltpParams.tpPrice && priceLimit > sltpParams.tpPrice) {
+                    throw new Error('TWAP限价不能大于止盈价格')
+                } else if (sltpParams.slPrice && priceLimit < sltpParams.slPrice) {
+                    throw new Error('TWAP限价不能小于止损价格')
+                }
+            } else {
+                if (sltpParams.tpPrice && priceLimit < sltpParams.tpPrice) {
+                    throw new Error('TWAP限价不能小于止盈价格')
+                } else if (sltpParams.slPrice && priceLimit > sltpParams.slPrice) {
+                    throw new Error('TWAP限价不能大于止损价格')
+                }
             }
         }
-        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, market })
+        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market })
     }
     logger.info(`创建合约市价单 ${exchange} ${symbol} ${side} ${params.quantity}(张) 杠杆:${realLeverage}x`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)

@@ -7,7 +7,7 @@ import { ElLoading } from 'element-plus'
 import Decimal from 'decimal.js'
 
 import { MARKET_TYPES, ORDER_TYPES, ORDER_SIDES, ORDER_AMOUNT_TYPES, MARGIN_MODES, POSITION_SIDES, STABLE_COINS } from 'share/const'
-import { checkSymbol, getPrecisionLength } from 'share/utils'
+import { checkSymbol, getPrecisionLength, isDev } from 'share/utils'
 
 import MarketSelectPanel from './components/MarketSelectPanel.vue'
 import Balance from './components/Balance.vue'
@@ -108,7 +108,7 @@ export default {
                 this.refreshTickerAgo()
                 this.showLogin = false
             } catch (e) {
-                console.log(e)
+                console.error(e)
                 this.showLogin = true
             }
         },
@@ -119,7 +119,7 @@ export default {
                 this.showLogin = false
                 this.init()
             } catch (e) {
-                console.log(e)
+                console.error(e)
 
             }
         },
@@ -335,7 +335,7 @@ export default {
                 })
                 this.resetForm(true)
             } catch (e) {
-                console.log(e)
+                console.error(e)
                 this.$message({
                     message: e.response.data,
                     type: 'error',
@@ -345,6 +345,10 @@ export default {
             }
         },
         validateForm() {
+            if (isDev() && !this.exchangeAccount.TESTNET) {
+                // 开发环境调试生产key，防止误下单
+                return false
+            }
             if (!this.orderAmount) return false
             if (this.orderType === ORDER_TYPES.MARKET) {
                 if (this.orderWithSLTP && !this.slPrice && !this.tpPrice) return false
@@ -352,33 +356,33 @@ export default {
                     if (!this.twapTotalMinute) {
                         return false
                     }
-                    if (this.twapPriceLimit) {
-                        if (this.isSpotMarket) {
-                            if (this.orderSide === ORDER_SIDES.BUY) {
-                                return this.twapPriceLimit > this.ticker?.last
-                            } else {
-                                return this.twapPriceLimit < this.ticker?.last
-                            }
-                        } else {
-                            if (this.curPosition && this.reduceOnly) {
-                                if (this.orderSide === ORDER_SIDES.BUY) {
-                                    // 平空
-                                    return this.twapPriceLimit < this.curPosition.markPrice
-                                } else {
-                                    // 平多
-                                    return this.twapPriceLimit > this.curPosition.markPrice
-                                }
-                            } else {
-                                if (this.orderSide === ORDER_SIDES.BUY) {
-                                    // 做多
-                                    return this.twapPriceLimit < this.curPosition.markPrice
-                                } else {
-                                    // 做空
-                                    return this.twapPriceLimit > this.curPosition.markPrice
-                                }
-                            }
-                        }
-                    }
+                    // if (this.twapPriceLimit) {
+                    //     if (this.isSpotMarket) {
+                    //         if (this.orderSide === ORDER_SIDES.BUY) {
+                    //             return this.twapPriceLimit > this.ticker?.last
+                    //         } else {
+                    //             return this.twapPriceLimit < this.ticker?.last
+                    //         }
+                    //     } else {
+                    //         if (this.curPosition && this.reduceOnly) {
+                    //             if (this.orderSide === ORDER_SIDES.BUY) {
+                    //                 // 平空
+                    //                 return this.twapPriceLimit > this.curPosition.markPrice
+                    //             } else {
+                    //                 // 平多
+                    //                 return this.twapPriceLimit > this.curPosition.markPrice
+                    //             }
+                    //         } else {
+                    //             if (this.orderSide === ORDER_SIDES.BUY) {
+                    //                 // 做多
+                    //                 return this.twapPriceLimit > this.ticker?.last
+                    //             } else {
+                    //                 // 做空
+                    //                 return this.twapPriceLimit < this.ticker?.last
+                    //             }
+                    //         }
+                    //     }
+                    // }
                 }
                 return true
             }
@@ -420,7 +424,7 @@ export default {
                     type: 'success',
                 })
             } catch (e) {
-                console.log(e)
+                console.error(e)
                 this.$message({
                     message: e.message,
                     type: 'error',
@@ -558,6 +562,28 @@ export default {
                 // console.log('this.tickerTimeAgo', this.tickerTimeAgo)
             }
             this.tickerAgoTimer = setTimeout(this.refreshTickerAgo, 1000)
+        },
+        async handleToggleTWAP(order) {
+            try {
+                await service.toggleTWAPOrder(this.exchange, order.symbol)
+            } catch (e) {
+                console.error(e)
+                this.$message({
+                    message: e.message,
+                    type: 'error',
+                })
+            }
+        },
+        async handleCloseTWAP(order) {
+            try {
+                await service.closeTWAPOrder(this.exchange, order.symbol)
+            } catch (e) {
+                console.error(e)
+                this.$message({
+                    message: e.message,
+                    type: 'error',
+                })
+            }
         },
     },
     computed: {
@@ -1025,11 +1051,11 @@ export default {
         <div class="slide-input">
             <el-slider v-model="orderAmountPct" @change="handleAmountPctChange"
                 :marks="{ 0: '0', 25: '25', 50: '50', 75: '75', 100: '100' }" show-input size="small"
-                :show-tooltip="true" />
+                :show-tooltip="false" />
         </div>
         <!-- 下单是否使用TWAP -->
         <TwapCheckbox v-show="orderType === ORDER_TYPES.MARKET" style="width: 70%;" v-model:checked="orderUseTWAP"
-            v-model:totalMinute="twapTotalMinute" v-model:priceLimit="twapPriceLimit"></TwapCheckbox>
+            v-model:totalMinute="twapTotalMinute" v-model:priceLimit="twapPriceLimit" :side="orderSide"></TwapCheckbox>
         <!-- 下单是否附带止盈止损 -->
         <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 0 10px 0 10px;">
             <el-checkbox v-model="orderWithSLTP" label="止盈止损" />
@@ -1058,7 +1084,7 @@ export default {
         <!-- 余额/仓位/委托... -->
         <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
             <el-tab-pane label="总览">
-                <TwapOrder v-for="item in exchangeAccount.twapOrders" :key="item.symbol" :order="item"></TwapOrder>
+                <TwapOrder v-for="item in exchangeAccount.twapOrders" :key="item.symbol" :order="item" @toggle="handleToggleTWAP" @close="handleCloseTWAP"></TwapOrder>
                 <template v-if="curOrders.length">
                     <Order v-for="item in curOrders" :key="item._id" :order="item" @cancel="handleCancelOrder"
                         @edit="handleEditOrder" @jump-market="handleJumpMarket">
@@ -1101,6 +1127,9 @@ export default {
 
     :deep(.el-slider__input) {
         width: 84px;
+    }
+    :deep(.el-slider__runway.show-input) {
+        margin-right: 24px;
     }
 }
 
