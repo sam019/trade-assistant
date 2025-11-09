@@ -33,6 +33,7 @@ if (isDev()) {
 }
 
 async function init() {
+    logger.warn('init server!')
     await connectDB()
     monitor.start()
     const app = new Hono()

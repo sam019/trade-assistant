@@ -660,7 +660,9 @@ export default {
                 }
             })
             balances.forEach(balance => {
-                balance.evaluateValue = this.getEvaluateValue(balance)
+                const evaluateValue = this.getEvaluateValue(balance)
+                // console.log('evaluateValue', evaluateValue)
+                balance.evaluateValue = evaluateValue
             })
             balances.sort((a, b) => {
                 if (this.isSpotMarket || this.isInversePerpMarket) {
@@ -687,6 +689,9 @@ export default {
                 return b.evaluateValue[this.marketType] - a.evaluateValue[this.marketType]
             })
             return balances
+        },
+        renderBalances() {
+            return this.balances.filter(balance => balance.evaluateValue.total >= 1 || Object.hasOwn(STABLE_COINS, balance.currency))
         },
         symbolsNeedTicker() {
             const symbols = []
@@ -1093,7 +1098,7 @@ export default {
                 <Position v-if="curPosition" :position="curPosition" @close-position="handleClosePosition"
                     @sltp="setPositionSLTP" @jump-market="handleJumpMarket">
                 </Position>
-                <Balance v-for="item in balances" :key="item.currency" :balance="item"
+                <Balance v-for="item in renderBalances" :key="item.currency" :balance="item"
                     :isCurQuote="item.currency === market.quote" @jump-market="handleJumpMarket">
                 </Balance>
             </el-tab-pane>

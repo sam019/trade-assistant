@@ -29,7 +29,7 @@ log4js.configure({
         fileFilter: {
             type: 'logLevelFilter',
             appender: 'file',
-            level: 'warn',
+            level: 'warn', // 仅warn以上级别日志写入到磁盘
         },
     },
     categories: {

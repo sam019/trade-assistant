@@ -22,7 +22,7 @@ export default {
     },
     methods: {
         formatValue(value) {
-            return value ? `$${value}` : ''
+            return value ? `$${value.toLocaleString()}` : ''
         },
     },
     computed: {
@@ -41,7 +41,7 @@ export default {
             <el-tag type="info" style="color: white;" @click="!isStableCoin && $emit('jumpMarket', `${balance.currency}/${STABLE_COINS.USDT}`)">
                 {{ balance.currency }}</el-tag>
             <div v-if="!isStableCoin">
-                <div>{{ evaluateValue.lastPrice }}</div>
+                <div>{{ formatValue(evaluateValue.total) }}</div>
             </div>
         </div>
         <div class="row2">
