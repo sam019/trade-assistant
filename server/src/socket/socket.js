@@ -15,7 +15,7 @@ export async function serve({
         cors: {
             origin: corsOrigin,
             credentials: true,
-            maxAge: 3600, // 加了这个ios26的safari才能通过cors校验，原因未知
+            maxAge: 7200, // 加了这个ios26的safari才能通过cors校验，原因未知
         },
     })
     _io.use(ioAuth)

@@ -1,24 +1,7 @@
 <script>
 import { ORDER_SIDES, ORDER_STATES, POSITION_SIDES } from 'share/const'
 import { checkSymbol } from 'share/utils'
-// orderSideLabel() {
-//     if (this.isConditionOrder) {
-//         if (this.cSymbol.isSpot) {
-//             return '买入'
-//         }
-//         if (this.order.side === ORDER_SIDES.BUY) {
-//             return '开多'
-//         }
-//         return '开空'
-//     }
-//     if (this.cSymbol.isSpot) {
-//         return '卖出'
-//     }
-//     if (this.position?.side === POSITION_SIDES.SHORT) {
-//         return '平空'
-//     }
-//     return '平多'
-// },
+
 export default {
     inject: ['positions'],
     props: {

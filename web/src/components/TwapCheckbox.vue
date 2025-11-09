@@ -1,5 +1,6 @@
 <script>
 import { ORDER_SIDES } from 'share/const'
+
 export default {
     props: {
         checked: {

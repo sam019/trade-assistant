@@ -1,8 +1,9 @@
+import fs from 'fs'
+import { createServer } from 'node:https'
+
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import fs from 'fs'
-import { createServer } from 'node:https'
 import Decimal from 'decimal.js'
 
 import { isDev } from 'share/utils.js'
@@ -17,6 +18,7 @@ import transferRoute from './api/transfer.js'
 import { authRouter, httpAuth } from './auth/auth.js'
 import socket from './socket/socket.js'
 import logger from './logger.js'
+import { getLocalIpAddress } from './utils.js'
 
 // 设置Decimal的默认舍入模式
 Decimal.config({ rounding: Decimal.ROUND_DOWN })
@@ -24,7 +26,8 @@ Decimal.config({ rounding: Decimal.ROUND_DOWN })
 let corsOrigin
 // console.log('isDev', isDev())
 if (isDev()) {
-    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', process.env.LAN_IP].map(host => `https://${host}:${process.env.WEB_PORT}`)
+    // console.log('getLocalIpAddress', getLocalIpAddress())
+    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', getLocalIpAddress()].map(host => `https://${host}:${process.env.WEB_PORT}`)
 } else {
     corsOrigin = [`https://${process.env.DOMAIN}:${process.env.WEB_PORT}`]
 }
@@ -43,7 +46,7 @@ async function init() {
             return ''
         },
         credentials: true,
-        maxAge: 3600,
+        maxAge: 7200,
     })).use('*', httpAuth)
         .get('/', (c) => {
             return c.text('Hello Hono!')
