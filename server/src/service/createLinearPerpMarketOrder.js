@@ -318,7 +318,7 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
     logger.info(`创建合约市价单 ${exchange} ${symbol} ${side} ${params.quantity}(张) 杠杆:${realLeverage}x`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)
     logger.info(`市价单成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(张)`)
-    await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
+    // await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
     if (withSLTP) {
         sltpParams.amount = result.amount
         sltpParams.unit = ORDER_AMOUNT_TYPES.CONTRACT

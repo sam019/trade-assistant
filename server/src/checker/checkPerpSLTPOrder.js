@@ -109,7 +109,7 @@ export default async function checPerpSLTPOrder(order, position) {
             }
             logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, cost: result.cost, price: result.price })
             // console.log(`仓位止盈结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
-            await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
+            // await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }
