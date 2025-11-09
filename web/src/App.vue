@@ -1032,7 +1032,7 @@ export default {
         <!-- 下单仓位数量 -->
         <div style="position: relative; padding: 10px 10px;">
             <el-input type="number" inputmode="decimal" clearable v-model="orderAmount" @change="handleAmountChange"
-                @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : '数量(保证金)'"
+                @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : reduceOnly ? '数量(仓位)' : '数量(保证金)'"
                 :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
                 <template #prefix>
                     <span v-show="orderUsePct">预估</span>
