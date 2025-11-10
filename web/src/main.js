@@ -21,11 +21,16 @@ if (typeof EventTarget !== "undefined") {
     }
 }
 
-// 移动端引入vConsole调试
-if (isDev() && isMobileDevice()) {
-    const VConsole = await import('vconsole')
-    // console.log('VConsole', VConsole)
-    const vConsole = new VConsole.default()
+
+if (isDev()) {
+    // 移动端引入vConsole调试
+    if (isMobileDevice()) {
+        const VConsole = await import('vconsole')
+        // console.log('VConsole', VConsole)
+        window.vConsole = new VConsole.default()
+    }
+    // 修改title方便识别
+    document.title = `dev - ${document.title}`
 }
 
 const app = createApp(App)
