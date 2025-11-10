@@ -7,7 +7,7 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import logger from '../logger.js'
 
-export async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market }) {
+export async function createTWAPOrder({ exchange, symbol, side, params, leverage, withSLTP, sltpParams, totalMinute, priceLimit, market }) {
     const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
     const { reduceOnly, quantity: totalAmount } = params
     logger.info(`开始 合约TWAP ${exchange} ${symbol} ${side} 总数量:${totalAmount}(张) 总时长:${totalMinute}(分钟) 限价:${priceLimit || '无'}`)
@@ -16,6 +16,8 @@ export async function createTWAPOrder({ exchange, symbol, side, params, withSLTP
         exchange,
         symbol,
         side,
+        leverage,
+        slPrice: sltpParams?.slPrice,
         totalAmount,
         filledAmount: 0,
         unit: ORDER_AMOUNT_TYPES.CONTRACT,
@@ -312,7 +314,7 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
                 }
             }
         }
-        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market })
+        return createTWAPOrder({ exchange, symbol, side, params, leverage: realLeverage, withSLTP, sltpParams, totalMinute, priceLimit, market })
     }
 
     logger.info(`创建合约市价单 ${exchange} ${symbol} ${side} ${params.quantity}(张) 杠杆:${realLeverage}x`)

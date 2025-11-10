@@ -113,7 +113,7 @@ export default {
                 </template>
                 <div v-else style="padding: 5px 0;">
                     <el-tag :type="cSymbol.isLinear ? 'primary' : 'warning'" effect="dark">{{ order.symbol }}</el-tag>
-                    <span style="margin-left: 5px;">未检测到仓位</span>
+                    <span style="margin-left: 5px; color: gray">未检测到仓位</span>
                 </div>
             </div>
             <div>

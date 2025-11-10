@@ -1,4 +1,6 @@
 <script>
+import Decimal from 'decimal.js'
+
 import { ORDER_SIDES, ORDER_STATES, POSITION_SIDES } from 'share/const'
 import { checkSymbol } from 'share/utils'
 
@@ -20,20 +22,23 @@ export default {
         position() {
             return !this.cSymbol.isSpot && this.positions.find(pos => pos.symbol === this.order.symbol)
         },
+        positionSide(_, previous) {
+            return this.position?.side || previous
+        },
         sideLabel() {
             if (this.cSymbol.isSpot) {
                 return this.order.side === ORDER_SIDES.BUY ? '买' : '卖'
             } else {
-                return this.order.side === ORDER_SIDES.BUY ? '多' : '空'
-                // if (this.position) {
-                //     if (this.position.side === POSITION_SIDES.LONG) {
-                //         return this.order.side === ORDER_SIDES.BUY ? '做多' : '卖多'
-                //     } else {
-                //         return this.order.side === ORDER_SIDES.SELL ? '做空' : '卖空'
-                //     }
-                // } else {
-                //     return this.order.side === ORDER_SIDES.BUY ? '做多' : '做空'
-                // }
+                // return this.order.side === ORDER_SIDES.BUY ? '多' : '空'
+                if (this.positionSide) {
+                    if (this.positionSide === POSITION_SIDES.LONG) {
+                        return this.order.side === ORDER_SIDES.BUY ? '做多' : '卖多'
+                    } else {
+                        return this.order.side === ORDER_SIDES.SELL ? '做空' : '卖空'
+                    }
+                } else {
+                    return this.order.side === ORDER_SIDES.BUY ? '做多' : '做空'
+                }
             }
         },
         isBuy() {
@@ -67,9 +72,14 @@ export default {
         toggleLabel() {
             return this.order.state === ORDER_STATES.STOPED ? '开启' : '暂停'
         },
-        // allowToggle() {
-        //     return this.order.state !== ORDER_STATES.SUSPEND
-        // },
+        contractSize(_, previous) {
+            return this.position?.contractSize || previous
+        },
+    },
+    methods: {
+        getContractBaseAmount(amount = 0) {
+            return new Decimal(amount).mul(this.contractSize || 1).toNumber()
+        },
     },
 }
 </script>
@@ -80,22 +90,27 @@ export default {
                 <el-tag :type="isBuy ? 'success' : 'danger'" effect="dark" size="small">TWAP({{ sideLabel }})</el-tag>
                 <el-tag :type="cSymbol.isSpot ? 'info' : cSymbol.isLinear ? 'primary' : 'warning'" effect="dark"
                     size="small">{{ order.symbol }}</el-tag>
+                <div class="settings" style="color: white">{{ order.leverage }}x</div>
                 <div class="settings">{{ order.totalMinute }}分钟</div>
-                <div class="settings">限价: {{ order.priceLimit || '-' }}</div>
+                <div v-if="order.priceLimit" class="settings">限价: {{ order.priceLimit }}</div>
+                <div v-if="order.slPrice" class="settings">止损: {{ order.slPrice }}</div>
             </div>
-            <div>
+
+        </div>
+        <div class="row2">
+            <div class="progress">
+                <el-progress :text-inside="true" :show-text="false" :stroke-width="20" :percentage="percentage"
+                    :status="status" :striped="isOpening" :striped-flow="isOpening" :duration="3" color="#909399">
+                </el-progress>
+                <div class="content">
+                    <span>{{ statusLabel || '' }}</span>
+                    <span>{{ getContractBaseAmount(order.filledAmount) }}/{{ getContractBaseAmount(order.totalAmount) }}({{ unitName }})</span>
+                </div>
+            </div>
+            <div class="control">
                 <el-button v-if="!isResovled" plain size="small" type="info" style="color: white"
                     @click="$emit('toggle', order)">{{ toggleLabel }}</el-button>
                 <el-button plain size="small" type="primary" @click="$emit('close', order)">关闭</el-button>
-            </div>
-        </div>
-        <div class="row2">
-            <el-progress :text-inside="true" :show-text="false" :stroke-width="20" :percentage="percentage"
-                :status="status" :striped="isOpening" :striped-flow="isOpening" :duration="3" color="#909399">
-            </el-progress>
-            <div class="content">
-                <span>{{ statusLabel || '' }}</span>
-                <span>{{ order.filledAmount }}/{{ order.totalAmount }}({{ unitName }})</span>
             </div>
         </div>
     </div>
@@ -129,8 +144,13 @@ export default {
 }
 
 .row2 {
-    position: relative;
+    display: flex;
+    align-items: center;
     margin: 5px 0;
+}
+.progress {
+    position: relative;
+    flex: 1 1 0;
 }
 .content {
     position: absolute;
@@ -148,6 +168,13 @@ export default {
         position: relative;
         right: 50%;
         transform: translateX(50%);
+    }
+}
+.control {
+    flex: 0 0 auto;
+    margin-left: 5px;
+    .el-button {
+        width: 40px;
     }
 }
 </style>

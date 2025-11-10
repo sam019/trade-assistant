@@ -53,7 +53,7 @@ export default {
                 @click="$emit('jumpMarket', position.symbol)">{{ position.symbol }}</el-tag>
             <!-- <el-tag size="small" :style="{ color: isLinear ? '' : 'warning' }">{{ typeLabel }}</el-tag> -->
             <span style="color: gray;">{{ marginModeLabel }}</span>
-            <span style="">{{ position.leverage.longLeverage }}x</span>
+            <span style="">{{ position.leverage?.longLeverage }}x</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>

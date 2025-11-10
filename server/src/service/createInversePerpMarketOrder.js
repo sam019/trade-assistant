@@ -164,7 +164,7 @@ export default async function createInversePerpMarketOrder(data, options = {}) {
                 }
             }
         }
-        return createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpParams, totalMinute, priceLimit, market })
+        return createTWAPOrder({ exchange, symbol, side, params, leverage: realLeverage, withSLTP, sltpParams, totalMinute, priceLimit, market })
     }
     logger.info(`创建合约市价单 ${exchange} ${symbol} ${side} ${params.quantity}(张) 杠杆:${realLeverage}x`)
     const result = await getExchangeMonitor(exchange).exchange.createOrderWs(symbol, ORDER_TYPES.MARKET, side, undefined, undefined, params)

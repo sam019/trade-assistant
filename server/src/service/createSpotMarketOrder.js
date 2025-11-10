@@ -18,6 +18,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
         exchange,
         symbol,
         side,
+        slPrice: sltpParams?.slPrice,
         totalAmount,
         filledAmount: 0,
         unit,
