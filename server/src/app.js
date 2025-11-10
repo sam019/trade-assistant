@@ -33,55 +33,61 @@ if (isDev()) {
 }
 
 async function init() {
-    logger.warn('init server!')
-    await connectDB()
-    monitor.start()
-    const app = new Hono()
+    try {
+        logger.warn('init server!')
+        await connectDB()
+        monitor.start()
+        const app = new Hono()
 
-    app.use('*', cors({
-        origin(domain) {
-            // console.log('domain', domain)
-            if (corsOrigin.includes(domain)) {
-                return domain
-            }
-            return ''
-        },
-        credentials: true,
-        maxAge: 7200,
-    })).use('*', httpAuth)
-        .get('/', (c) => {
-            return c.text('Hello Hono!')
+        app.use('*', cors({
+            origin(domain) {
+                // console.log('domain', domain)
+                if (corsOrigin.includes(domain)) {
+                    return domain
+                }
+                return ''
+            },
+            credentials: true,
+            maxAge: 7200,
+        })).use('*', httpAuth)
+            .get('/', (c) => {
+                return c.text('Hello Hono!')
+            })
+            .route('/exchange', exchangeRoute)
+            .route('/order', orderRoute)
+            .route('/market', marketRoute)
+            .route('/position', positionRoute)
+            .route('/transfer', transferRoute)
+            .route('/auth', authRouter)
+
+        app.onError((err, c) => {
+            logger.error(err)
+            return c.json(err.message, 500)
         })
-        .route('/exchange', exchangeRoute)
-        .route('/order', orderRoute)
-        .route('/market', marketRoute)
-        .route('/position', positionRoute)
-        .route('/transfer', transferRoute)
-        .route('/auth', authRouter)
-
-    app.onError((err, c) => {
-        logger.error(err)
-        return c.json(err.message, 500)
-    })
-    const serverParams = {
-        fetch: app.fetch,
-        port: process.env.PORT || 3000,
-    }
-    if (isDev()) {
-        serverParams.createServer = createServer
-        serverParams.serverOptions = {
-            key: fs.readFileSync('../localhost+3-key.pem'),
-            cert: fs.readFileSync('../localhost+3.pem'),
+        const serverParams = {
+            fetch: app.fetch,
+            port: process.env.PORT || 3000,
         }
+        if (isDev()) {
+            serverParams.createServer = createServer
+            serverParams.serverOptions = {
+                key: fs.readFileSync('../localhost+3-key.pem'),
+                cert: fs.readFileSync('../localhost+3.pem'),
+            }
+        }
+        const server = serve(
+            serverParams,
+            (info) => {
+                console.log(`Server is running on https://localhost:${info.port}`)
+            },
+        )
+        // console.log('corsOrigin', corsOrigin)
+        socket.serve({ server, corsOrigin })
+    } catch (e) {
+        logger.fatal(e)
+        // 主程序错误，抛出并终止，由docker重启
+        throw e
     }
-    const server = serve(
-        serverParams,
-        (info) => {
-            console.log(`Server is running on https://localhost:${info.port}`)
-        },
-    )
-    // console.log('corsOrigin', corsOrigin)
-    socket.serve({ server, corsOrigin })
 }
 
 init()
