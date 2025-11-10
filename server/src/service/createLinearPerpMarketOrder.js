@@ -147,9 +147,9 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                 
                 await sleep(TWAP_INTERVAL, sign)
             } catch (e) {
-                if (isDev()) {
-                    throw e
-                }
+                // if (isDev()) {
+                //     throw e
+                // }
                 logger.error('createTWAPOrder error: ', e.message)
                 await sleep(TWAP_INTERVAL, sign)
             }

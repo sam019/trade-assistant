@@ -481,8 +481,9 @@ export default {
         async handleEditOrder(order) {
             // console.log('handleEditOrder', order)
             if (this.orderId === order.id) return
-            if (this.market.symbol !== order.symbol) {
-                const market = await service.getMarket(this.exchange, order.symbol)
+            let market = this.market
+            if (market.symbol !== order.symbol) {
+                market = await service.getMarket(this.exchange, order.symbol)
                 this.changeMarket(market)
             }
             this.orderId = order._id
@@ -495,13 +496,14 @@ export default {
             this.totalMinute = order.totalMinute || 1
             this.priceLimit = order.priceLimit
 
-            if (this.isSpotMarket) {
+            const cSymbol = checkSymbol(order.symbol)
+            if (cSymbol.isSpot) {
                 this.orderAmountUnit = order.unit
                 this.handleAmountChange(order.amount)
             } else {
                 if (order.unit === ORDER_AMOUNT_TYPES.CONTRACT) {
-                    this.orderAmountUnit = ORDER_AMOUNT_TYPES.QUOTE
-                    this.handleAmountChange(order.amount * this.market.contractSize)
+                    this.orderAmountUnit = cSymbol.contractBase
+                    this.handleAmountChange(new Decimal(order.amount).mul(market.contractSize).toNumber())
                 } else {
                     this.orderAmountUnit = order.unit
                     this.handleAmountChange(order.amount)

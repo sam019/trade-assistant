@@ -77,9 +77,9 @@ export default async function checkSpotSLTPrder(order, ticker) {
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
-        if (isDev()) {
-            throw e
-        }
+        // if (isDev()) {
+        //     throw e
+        // }
         logger.sltpErr({ exchange, symbol, e })
         await sleep(1000)
         // await orderModel.findByIdAndDelete(_id);
