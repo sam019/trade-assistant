@@ -34,7 +34,7 @@ function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol
 }
 
 export default async function checkSpotSLTPOrder(order, ticker) {
-    const { _id, symbol, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice } = order
+    const { _id, symbol, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice, useTWAP, totalMinute, priceLimit  } = order
     try {
         if (orderWatcher.isOrderDealing(_id)) {
             return
@@ -49,6 +49,7 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         // console.log(getExchangeMonitor(exchange).balance.spot[currency])
         if (lastPrice <= triggerPrice || global.__Force?.v()) {
             orderWatcher.markOrderDealing(_id)
+
             const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
             const params = {
                 exchange,
@@ -59,11 +60,17 @@ export default async function checkSpotSLTPOrder(order, ticker) {
                 withSLTP,
                 slPrice,
                 tpPrice,
+                useTWAP,
+                totalMinute,
+                priceLimit,
             }
+
             const options = { skipSLTPOrderSave: true }
+
             logger.cond({ exchange, symbol, side: params.side, lastPrice, triggerPrice, amount: params.amount, unit: params.unit })
             // console.log(`触发条件委托订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             const result = await service.createSpotMarketOrder(params, options)
+
             logger.condSucc({ exchange, symbol, side: params.side, cost: result.cost, price: result.price, unit: cSymbol.base })
             // console.log(`条件委托订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 买入数量:${result.filled}${cSymbol.base}`)
             await orderWatcher.resolveOrder(_id)
@@ -75,10 +82,8 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         }
         logger.condErr({ exchange, symbol, e })
         await sleep(1000)
-        // console.log('条件委托出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
-        // throw e;
         
     }
 }

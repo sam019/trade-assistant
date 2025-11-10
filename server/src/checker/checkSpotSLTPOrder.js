@@ -35,7 +35,7 @@ function getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol
 }
 
 export default async function checkSpotSLTPrder(order, ticker) {
-    const { _id, symbol, amount, unit, slPrice, tpPrice, exchange } = order
+    const { _id, symbol, amount, unit, slPrice, tpPrice, exchange, useTWAP, totalMinute, priceLimit } = order
     try {
         // if (status === 'closed') return;
         if (orderWatcher.isOrderDealing(_id)) {
@@ -48,40 +48,31 @@ export default async function checkSpotSLTPrder(order, ticker) {
         // console.log('check order', order.slPrice, order.tpPrice, lastPrice)
         const cSymbol = checkSymbol(symbol)
         const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]
+        const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
+        const params = {
+            exchange,
+            symbol,
+            amount: realAmount,
+            unit: realUnit,
+            side: ORDER_SIDES.SELL,
+            useTWAP,
+            totalMinute,
+            priceLimit,
+        }
         // const balance = unit === ORDER_AMOUNT_TYPES.BASE ? getExchangeMonitor(exchange).balance.spot[cSymbol[unit]] : new Decimal(amount).div(lastPrice)
         // console.log('balance', balance)
-        if (slPrice && lastPrice <= slPrice || global.__Force?.v()) {
-            // 判断是否止损
+        const isSlTriggered = slPrice && (lastPrice <= slPrice) // 判断是否止损
+        const isTpTriggered = tpPrice && (lastPrice >= tpPrice) // 判断是否止盈
+        if (isSlTriggered || isTpTriggered || global.__Force?.v()) {
             orderWatcher.markOrderDealing(_id)
+
+            const triggerPrice = isTpTriggered ? tpPrice : slPrice
             // console.log(`触发止损订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 最新价格:${lastPrice} 卖出数量:${amount}${cSymbol[unit]}`)
-            const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
-            const params = {
-                exchange,
-                symbol,
-                amount: realAmount,
-                unit: realUnit,
-                side: ORDER_SIDES.SELL,
-            }
-            logger.sltp({ exchange, symbol, isSL: true, side: params.side, lastPrice, triggerPrice: slPrice, amount: params.amount, unit: params.unit })
+            logger.sltp({ exchange, symbol, isSL: !isTpTriggered, side: params.side, lastPrice, triggerPrice, amount: params.amount, unit: params.unit })
+
             const result = await service.createSpotMarketOrder(params)
             // console.log(`止损订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 卖出数量:${result.filled}${cSymbol.base}`)
-            logger.sltpSucc({ exchange, symbol, isSL: true, side:params.side, cost: result.cost, price: result.price })
-            await orderWatcher.resolveOrder(_id)
-            // orderWatcher.unmarkOrderDealing(_id);
-        } else if (tpPrice && lastPrice >= tpPrice) {
-            // 判断是否止盈
-            orderWatcher.markOrderDealing(_id)
-            const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
-            const params = {
-                exchange,
-                symbol,
-                amount: realAmount,
-                unit: realUnit,
-                side: ORDER_SIDES.SELL,
-            }
-            logger.sltp({ exchange, symbol, isSL: false, side: params.side, lastPrice, triggerPrice: tpPrice, amount: params.amount, unit: params.unit })
-            const result = await service.createSpotMarketOrder(params)
-            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, cost: result.cost, price: result.price })
+            logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side:params.side, cost: result.cost, price: result.price })
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }
@@ -93,8 +84,5 @@ export default async function checkSpotSLTPrder(order, ticker) {
         await sleep(1000)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
-        
-        // console.log('止盈止损订单出错, id:' + _id, e)
-        // throw e;
     }
 }

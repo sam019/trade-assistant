@@ -53,7 +53,7 @@ function getRealAmount({ position, amount, unit, exchange, symbol, cSymbol }) {
 
 export default async function checPerpSLTPOrder(order, position) {
     // console.log('checkLinearPerpOrder', order.symbol, order.slPrice, order.tpPrice)
-    const { _id, symbol, amount, unit, slPrice, tpPrice, exchange } = order
+    const { _id, symbol, amount, unit, slPrice, tpPrice, exchange, useTWAP, totalMinute, priceLimit } = order
     try {
         if (orderWatcher.isOrderDealing(_id)) {
             return
@@ -63,54 +63,45 @@ export default async function checPerpSLTPOrder(order, position) {
         if (!position) {
             throw new Error('错误：无法获取symbol position：' + symbol)
         }
-        const cSymbol = checkSymbol(symbol)
-        const params = {
-            exchange,
-            symbol,
-            reduceOnly: true,
-            side: position.side === POSITION_SIDES.LONG ? ORDER_SIDES.SELL : ORDER_SIDES.BUY,
-        }
-        const isSlTriggered = position.side === POSITION_SIDES.LONG ? position.markPrice <= slPrice : position.markPrice >= slPrice
-        const isTpTriggered = position.side === POSITION_SIDES.LONG ? position.markPrice >= tpPrice : position.markPrice <= tpPrice
-        if (slPrice && isSlTriggered || global.__Force?.v()) {
+        
+        const isSlTriggered = slPrice && (position.side === POSITION_SIDES.LONG ? position.markPrice <= slPrice : position.markPrice >= slPrice)
+        const isTpTriggered = tpPrice && (position.side === POSITION_SIDES.LONG ? position.markPrice >= tpPrice : position.markPrice <= tpPrice)
+        if (isSlTriggered || isTpTriggered || global.__Force?.v()) {
             // 判断是否止损
             // console.log(`触发仓位止损, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
 
+            const cSymbol = checkSymbol(symbol)
+            const params = {
+                exchange,
+                symbol,
+                reduceOnly: true,
+                side: position.side === POSITION_SIDES.LONG ? ORDER_SIDES.SELL : ORDER_SIDES.BUY,
+                useTWAP,
+                totalMinute,
+                priceLimit,
+            }
+
             const { realAmount, realUnit } = getRealAmount({ position, amount, unit, exchange, symbol, cSymbol })
+
             params.amount = realAmount
             params.unit = realUnit
-            logger.sltp({ exchange, symbol, isSL: true, side: params.side, lastPrice: position.markPrice, triggerPrice: slPrice, amount: params.amount, unit: params.unit })
+
+            const triggerPrice = isTpTriggered ? tpPrice : slPrice
+
+            logger.sltp({ exchange, symbol, isSL: !isTpTriggered, side: params.side, lastPrice: position.markPrice, triggerPrice, amount: params.amount, unit: params.unit })
+
             let result
             if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params)
             } else {
                 result = await service.createInversePerpMarketOrder(params)
             }
-            logger.sltpSucc({ exchange, symbol, isSL: true, side: params.side, cost: result.cost, price: result.price })
+
+            logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side: params.side, cost: result.cost, price: result.price })
             // console.log(`仓位止损结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)
-            // orderWatcher.unmarkOrderDealing(_id);
-        } else if (tpPrice && isTpTriggered) {
-            // 判断是否止盈
-            // console.log(`触发仓位止盈, 交易所:${exchange} 交易对:${symbol} 触发价格:${tpPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
-            orderWatcher.markOrderDealing(_id)
-
-            const { realAmount, realUnit } = getRealAmount({ position, amount, unit, exchange, symbol, cSymbol })
-            params.amount = realAmount
-            params.unit = realUnit
-            logger.sltp({ exchange, symbol, isSL: false, side: params.side, lastPrice: position.markPrice, triggerPrice: tpPrice, amount: params.amount, unit: params.unit })
-            let result
-            if (cSymbol.isLinear) {
-                result = await service.createLinearPerpMarketOrder(params)
-            } else {
-                result = await service.createInversePerpMarketOrder(params)
-            }
-            logger.sltpSucc({ exchange, symbol, isSL: false, side: params.side, cost: result.cost, price: result.price })
-            // console.log(`仓位止盈结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
-            // await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
-            await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }
     } catch (e) {
@@ -119,7 +110,6 @@ export default async function checPerpSLTPOrder(order, position) {
         }
         logger.sltpErr({ exchange, symbol, e })
         await sleep(1000)
-        // console.log('仓位止盈止损出错, id:' + _id, e)
         // await orderModel.findByIdAndDelete(_id);
         orderWatcher.unmarkOrderDealing(_id)
         

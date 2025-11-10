@@ -491,6 +491,9 @@ export default {
             this.tpPrice = order.tpPrice
             this.orderWithSLTP = order.withSLTP
             this.triggerPrice = order.triggerPrice
+            this.orderUseTWAP = order.useTWAP
+            this.totalMinute = order.totalMinute || 1
+            this.priceLimit = order.priceLimit
 
             if (this.isSpotMarket) {
                 this.orderAmountUnit = order.unit
@@ -1001,7 +1004,7 @@ export default {
             <el-col style="flex-basis: 50%;">
                 <el-button :type="orderSide === ORDER_SIDES.SELL ? 'danger' : ''" style="width: 100%; outline: none;"
                     :disabled="isSideDisabled(ORDER_SIDES.SELL)" @click="handleSideChange(ORDER_SIDES.SELL)">{{
-                        sellLabel
+                    sellLabel
                     }}</el-button>
             </el-col>
         </el-row>
@@ -1011,7 +1014,7 @@ export default {
             <el-col style="flex-basis: auto; height: 100%;">
                 <template v-if="!Number.isNaN(displayAvaiableOrderAmount)">
                     {{ displayAvaiableOrderAmount }}{{
-                        isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
+                    isAvaiableOrderAmountEstimated ? '(预估)' : '' }}
                 </template>
             </el-col>
         </el-row>
@@ -1032,7 +1035,8 @@ export default {
         <!-- 下单仓位数量 -->
         <div style="position: relative; padding: 10px 10px;">
             <el-input type="number" inputmode="decimal" clearable v-model="orderAmount" @change="handleAmountChange"
-                @focus="orderUsePct = false" :controls="false" :placeholder="isSpotMarket ? '数量' : reduceOnly ? '数量(仓位)' : '数量(保证金)'"
+                @focus="orderUsePct = false" :controls="false"
+                :placeholder="isSpotMarket ? '数量' : reduceOnly ? '数量(仓位)' : '数量(保证金)'"
                 :class="{ 'is-estimate-amount': orderUsePct, 'order-amount-input': true }">
                 <template #prefix>
                     <span v-show="orderUsePct">预估</span>
@@ -1059,7 +1063,7 @@ export default {
                 :show-tooltip="false" />
         </div>
         <!-- 下单是否使用TWAP -->
-        <TwapCheckbox v-show="orderType === ORDER_TYPES.MARKET" style="width: 70%;" v-model:checked="orderUseTWAP"
+        <TwapCheckbox style="width: 70%;" v-model:checked="orderUseTWAP"
             v-model:totalMinute="twapTotalMinute" v-model:priceLimit="twapPriceLimit" :side="orderSide"></TwapCheckbox>
         <!-- 下单是否附带止盈止损 -->
         <div v-show="showWithSLTP" style="display: flex; align-items: center; padding: 0 10px 0 10px;">
@@ -1089,7 +1093,8 @@ export default {
         <!-- 余额/仓位/委托... -->
         <el-tabs type="card" style="flex: 0 1 auto; padding: 10px; overflow: hidden;" class="account-tabs">
             <el-tab-pane label="总览">
-                <TwapOrder v-for="item in exchangeAccount.twapOrders" :key="item.symbol" :order="item" @toggle="handleToggleTWAP" @close="handleCloseTWAP"></TwapOrder>
+                <TwapOrder v-for="item in exchangeAccount.twapOrders" :key="item.symbol" :order="item"
+                    @toggle="handleToggleTWAP" @close="handleCloseTWAP" @jump-market="handleJumpMarket"></TwapOrder>
                 <template v-if="curOrders.length">
                     <Order v-for="item in curOrders" :key="item._id" :order="item" @cancel="handleCancelOrder"
                         @edit="handleEditOrder" @jump-market="handleJumpMarket">

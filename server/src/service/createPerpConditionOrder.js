@@ -8,10 +8,10 @@ import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建合约条件委托（条件委托负责买）
 export default async function createPerpConditionOrder(data) {
-    const { exchange, symbol, side, amount, unit, usePct, amountPct, triggerPrice, leverage, id, withSLTP, slPrice, tpPrice } = data
+    const { exchange, symbol, side, amount, unit, usePct, amountPct, triggerPrice, leverage, id, withSLTP, slPrice, tpPrice, useTWAP, totalMinute, priceLimit } = data
     const { linear, inverse } = getExchangeMonitor(exchange).markets
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol)
-    // console.log('condition', triggerPrice)
+    // console.log('condition', useTWAP, totalMinute, priceLimit)
     if (!triggerPrice) {
         throw new Error('委托触发价格设置错误')
     }
@@ -31,7 +31,6 @@ export default async function createPerpConditionOrder(data) {
             throw new Error('错误: 杠杆参数不一致')
         }
     }
-    
     const params = {
         exchange,
         symbol,
@@ -41,20 +40,9 @@ export default async function createPerpConditionOrder(data) {
         leverage,
         amount,
         unit,
-        withSLTP,
-    }
-
-    if (usePct) {
-        const cSymbol = checkSymbol(symbol)
-        if (cSymbol.isLinear) {
-            const balance = getExchangeMonitor(exchange).balance.linear[cSymbol.quote]?.free || 0
-            params.amount = new Decimal(amountPct).div(100).mul(balance).toDecimalPlaces(getPrecisionLength(market.precision.quote)).toNumber()
-            params.unit = ORDER_AMOUNT_TYPES.QUOTE
-        } else {
-            const balance = getExchangeMonitor(exchange).balance.inverse[cSymbol.base]?.free || 0
-            params.amount = new Decimal(amountPct).div(100).mul(balance).toDecimalPlaces(getPrecisionLength(market.precision.base)).toNumber()
-            params.unit = ORDER_AMOUNT_TYPES.BASE
-        }
+        useTWAP,
+        totalMinute,
+        priceLimit,
     }
     if (withSLTP) {
         params.withSLTP = true
@@ -88,6 +76,19 @@ export default async function createPerpConditionOrder(data) {
                     throw new Error('止盈触发价格设置错误')
                 }
             }
+        }
+    }
+    
+    if (usePct) {
+        const cSymbol = checkSymbol(symbol)
+        if (cSymbol.isLinear) {
+            const balance = getExchangeMonitor(exchange).balance.linear[cSymbol.quote]?.free || 0
+            params.amount = new Decimal(amountPct).div(100).mul(balance).toDecimalPlaces(getPrecisionLength(market.precision.quote)).toNumber()
+            params.unit = ORDER_AMOUNT_TYPES.QUOTE
+        } else {
+            const balance = getExchangeMonitor(exchange).balance.inverse[cSymbol.base]?.free || 0
+            params.amount = new Decimal(amountPct).div(100).mul(balance).toDecimalPlaces(getPrecisionLength(market.precision.base)).toNumber()
+            params.unit = ORDER_AMOUNT_TYPES.BASE
         }
     }
     // console.log('createPerpMarketConditionOrder', params)

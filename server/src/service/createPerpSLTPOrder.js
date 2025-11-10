@@ -8,7 +8,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建合约止盈止损委托（止盈止损委托负责卖）
 export default async function createPerpSLTPOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id } = data
+    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, useTWAP, totalMinute, priceLimit, id } = data
     const { linear, inverse } = getExchangeMonitor(exchange).markets
     const market = [...linear, ...inverse].find(mar => mar.symbol === symbol)
     const position = getExchangeMonitor(exchange).positions?.find(pos => pos.symbol === symbol)
@@ -47,6 +47,9 @@ export default async function createPerpSLTPOrder(data) {
         unit,
         slPrice,
         tpPrice,
+        useTWAP,
+        totalMinute,
+        priceLimit,
     }
     if (usePct) {
         params.amount = new Decimal(amountPct).div(100).mul(position.contracts).toDecimalPlaces(getPrecisionLength(market.precision.amount)).toNumber()

@@ -16,6 +16,9 @@ const orderSchema = new mongoose.Schema({
     amount: Number, // 数量
     unit: String, // 单位 base quote
     state: String, // 状态 opening resovled closed
+    useTWAP: Boolean, // 是否使用TWAP下单 (condition, sltp)
+    totalMinute: Number, // TWAP总时长 (condition, sltp)
+    priceLimit: Number, // TWAP限价 (condition, sltp)
 }, { timestamps: true })
 const orderModel = mongoose.model('order', orderSchema)
 

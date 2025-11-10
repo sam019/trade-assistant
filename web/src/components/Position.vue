@@ -33,8 +33,8 @@ export default {
         cSymbol() {
             return checkSymbol(this.position.symbol)
         },
-        marginRatio() {
-            return new Decimal(this.position.marginRatio).mul(100).toNumber()
+        marginPercent() {
+            return new Decimal(this.position.initialMarginPercentage).mul(100).toNumber()
         },
         contractAmount() {
             return new Decimal(this.position.contracts).mul(this.position.contractSize).toNumber()
@@ -77,7 +77,7 @@ export default {
             </div>
             <div>
                 <div class="label">保证金比率</div>
-                <div class="value">{{ marginRatio }}%</div>
+                <div class="value">{{ marginPercent }}%</div>
             </div>
         </div>
         <div class="row">

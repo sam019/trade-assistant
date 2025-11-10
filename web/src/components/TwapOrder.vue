@@ -89,11 +89,11 @@ export default {
             <div>
                 <el-tag :type="isBuy ? 'success' : 'danger'" effect="dark" size="small">TWAP({{ sideLabel }})</el-tag>
                 <el-tag :type="cSymbol.isSpot ? 'info' : cSymbol.isLinear ? 'primary' : 'warning'" effect="dark"
-                    size="small">{{ order.symbol }}</el-tag>
+                    size="small" @click="$emit('jumpMarket', order.symbol)">{{ order.symbol }}</el-tag>
                 <div class="settings" style="color: white">{{ order.leverage }}x</div>
-                <div class="settings">{{ order.totalMinute }}分钟</div>
-                <div v-if="order.priceLimit" class="settings">限价: {{ order.priceLimit }}</div>
-                <div v-if="order.slPrice" class="settings">止损: {{ order.slPrice }}</div>
+                <div class="settings"><span>{{ order.totalMinute }}</span><span>分钟</span></div>
+                <div v-if="order.priceLimit" class="settings"><span>限价:</span><span>{{ order.priceLimit }}</span></div>
+                <div v-if="order.slPrice" class="settings"><span>止损:</span><span>{{ order.slPrice }}</span></div>
             </div>
 
         </div>
@@ -104,7 +104,8 @@ export default {
                 </el-progress>
                 <div class="content">
                     <span>{{ statusLabel || '' }}</span>
-                    <span>{{ getContractBaseAmount(order.filledAmount) }}/{{ getContractBaseAmount(order.totalAmount) }}({{ unitName }})</span>
+                    <span>{{ getContractBaseAmount(order.filledAmount) }}/{{ getContractBaseAmount(order.totalAmount)
+                        }}({{ unitName }})</span>
                 </div>
             </div>
             <div class="control">
@@ -141,6 +142,9 @@ export default {
 
 .settings {
     color: gray;
+    & > span {
+        display: inline-block;
+    }
 }
 
 .row2 {

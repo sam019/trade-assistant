@@ -48,7 +48,7 @@ function getRealAmount({ balance, lastPrice, _id, amount, unit, exchange, symbol
 
 export default async function checkPerpCondOrder(order, ticker) {
     // console.log('checkLinearPerpOrder', order.symbol, order.slPrice, order.tpPrice)
-    const { _id, symbol, side, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice, leverage } = order
+    const { _id, symbol, side, amount, unit, triggerPrice, exchange, withSLTP, slPrice, tpPrice, leverage, useTWAP, totalMinute, priceLimit } = order
     try {
         // throw new Error('test')
         if (orderWatcher.isOrderDealing(_id)) {
@@ -58,36 +58,47 @@ export default async function checkPerpCondOrder(order, ticker) {
         if (!lastPrice) {
             throw new Error('错误：无法获取tick：' + symbol)
         }
-        const cSymbol = checkSymbol(symbol)
-        const params = {
-            exchange,
-            symbol,
-            side,
-            withSLTP,
-            slPrice,
-            tpPrice,
-            leverage,
-        }
-        const balance = cSymbol.isLinear
-            ? getExchangeMonitor(exchange).balance.linear[cSymbol.quote]
-            : getExchangeMonitor(exchange).balance.inverse[cSymbol.base]
+        
         // console.log('global.__Force?.v()', global.__Force?.v())
-        if ((side === ORDER_SIDES.BUY ? lastPrice < triggerPrice : lastPrice > triggerPrice) || global.__Force?.v()) {
+        if ((side === ORDER_SIDES.BUY ? lastPrice <= triggerPrice : lastPrice >= triggerPrice) || global.__Force?.v()) {
             // 多单且价格小于触发价，空单且价格大于触发价，触发委托
             // console.log(`触发条件委托, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             orderWatcher.markOrderDealing(_id)
 
+            const cSymbol = checkSymbol(symbol)
+            const params = {
+                exchange,
+                symbol,
+                side,
+                withSLTP,
+                slPrice,
+                tpPrice,
+                leverage,
+                useTWAP,
+                totalMinute,
+                priceLimit,
+            }
+
+            const balance = cSymbol.isLinear
+                ? getExchangeMonitor(exchange).balance.linear[cSymbol.quote]
+                : getExchangeMonitor(exchange).balance.inverse[cSymbol.base]
+
             const { realAmount, realUnit } = getRealAmount({ balance, _id, lastPrice, amount, unit, exchange, symbol, cSymbol })
+
             params.amount = realAmount
             params.unit = realUnit
+
             const options = { skipSLTPOrderSave: true }
+
             logger.cond({ exchange, symbol, side: params.side, lastPrice, triggerPrice, amount : params.amount, unit: params.unit })
+
             let result
             if (cSymbol.isLinear) {
                 result = await service.createLinearPerpMarketOrder(params, options)
             } else {
                 result = await service.createInversePerpMarketOrder(params, options)
             }
+
             logger.condSucc({ exchange, symbol, side: params.side, cost: result.cost, price: result.price, unit: ORDER_AMOUNT_TYPES.CONTRACT })
             // console.log(`条件委托结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 买入数量:${result.filled}`)
             // await getExchangeMonitor(exchange).awaitPositionsUpdate(symbol)
@@ -99,7 +110,6 @@ export default async function checkPerpCondOrder(order, ticker) {
         if (isDev()) {
             throw e
         }
-        // console.log('条件委托出错, id:' + _id, e)
         logger.condErr({ exchange, symbol, e })
         await sleep(1000)
         // await orderModel.findByIdAndDelete(_id);

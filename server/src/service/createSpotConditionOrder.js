@@ -7,7 +7,7 @@ import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 
 export default async function createSpotConditionOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, triggerPrice, withSLTP, slPrice, tpPrice, id } = data
+    const { exchange, symbol, amount, unit, usePct, amountPct, triggerPrice, withSLTP, slPrice, tpPrice, useTWAP, totalMinute, priceLimit, id } = data
     if (!triggerPrice) {
         throw new Error('委托触发价格设置错误')
     }
@@ -22,6 +22,9 @@ export default async function createSpotConditionOrder(data) {
         type: ORDER_TYPES.CONDITION,
         amount,
         unit,
+        useTWAP,
+        totalMinute,
+        priceLimit,
     }
     // usePct为true时，换算为绝对值
     if (usePct) {

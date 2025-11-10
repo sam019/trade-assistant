@@ -8,7 +8,7 @@ import orderWatcher from '../monitor/orderMonitor.js'
 
 // 创建现货止盈止损委托（止盈止损委托负责卖）
 export default async function createSpotSLTPOrder(data) {
-    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, id } = data
+    const { exchange, symbol, amount, unit, usePct, amountPct, slPrice, tpPrice, useTWAP, totalMinute, priceLimit, id } = data
     if (!slPrice && !tpPrice) {
         throw new Error('止盈止损触发价格设置错误')
     }
@@ -23,6 +23,9 @@ export default async function createSpotSLTPOrder(data) {
         type: ORDER_TYPES.SLTP,
         amount,
         unit,
+        useTWAP,
+        totalMinute,
+        priceLimit,
     }
     // usePct为true时，换算为绝对值
     if (usePct) {
