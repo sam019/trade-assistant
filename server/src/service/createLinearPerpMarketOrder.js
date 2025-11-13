@@ -331,4 +331,3 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
     }
     return result
 }
-// 创

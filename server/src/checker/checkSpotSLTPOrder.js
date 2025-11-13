@@ -72,9 +72,7 @@ export default async function checkSpotSLTPrder(order, ticker) {
 
             const result = await service.createSpotMarketOrder(params)
             // console.log(`止损订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 卖出数量:${result.filled}${cSymbol.base}`)
-            if (!useTWAP) {
-                logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side:params.side, cost: result.cost, price: result.price })
-            }
+            logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side:params.side, cost: result.cost, price: result.price, useTWAP, totalMinute, priceLimit })
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
         }

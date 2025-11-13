@@ -135,9 +135,14 @@ class Logger {
     sltp({ exchange, symbol, isSL, side, triggerPrice, lastPrice, amount, unit }) {
         _logger.info(`${isSL ? 'SL' : 'TP'} Order TRIGGERED on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}, amount:${amount} unit:${unit}`)
     }
-    sltpSucc({ exchange, symbol, isSL, side, cost, price }) {
-        _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, volume:${cost}, price:${price}`)
-        bot.pushMessage(`${isSL ? '止损' : '止盈'} 成功\n${exchange} ${symbol}\n${getSLTPOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
+    sltpSucc({ exchange, symbol, isSL, side, cost, price, useTWAP, totalMinute, priceLimit }) {
+        if (!useTWAP) {
+            _logger.info(`${isSL ? 'SL' : 'TP'} Order SUCCESS on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, volume:${cost}, price:${price}`)
+            bot.pushMessage(`${isSL ? '止损' : '止盈'} 成功\n${exchange} ${symbol}\n${getSLTPOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
+        } else {
+            _logger.info(`${isSL ? 'SL' : 'TP'} Order Trigger TWAP on ${exchange}, ${symbol}, ${getSLTPOperName(symbol, side)}, totalMinute:${totalMinute}, priceLimit:${priceLimit}`)
+            bot.pushMessage(`${isSL ? '止损' : '止盈'} 触发TWAP 成功\n${exchange} ${symbol}\n${getSLTPOperName(symbol, side, true)} 分钟: ${totalMinute} 限价: ${priceLimit}`)
+        }
     }
     sltpErr({ exchange, symbol, e }) {
         _logger.trace(`SLTP Order FAILED on ${exchange}, ${symbol}`, e)
@@ -147,9 +152,15 @@ class Logger {
     cond({ exchange, symbol, side, lastPrice, triggerPrice }) {
         _logger.info(`Condition Order TRIGGERED on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, last:${lastPrice}, trigger:${triggerPrice}`)
     }
-    condSucc({ exchange, symbol, side, cost, price }) {
-        _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, volume:${cost}, price:${price}`)
-        bot.pushMessage(`条件委托 成功\n${exchange}, ${symbol}\n${getOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
+    condSucc({ exchange, symbol, side, cost, price, useTWAP, totalMinute, priceLimit }) {
+        if (!useTWAP) {
+            _logger.info(`Condition Order SUCCESS on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, volume:${cost}, price:${price}`)
+            bot.pushMessage(`条件委托 成功\n${exchange}, ${symbol}\n${getOperName(symbol, side, true)} 价格: ${price} 消费: ${cost}`)
+        } else {
+            _logger.info(`Condition Order Trigger TWAP on ${exchange}, ${symbol}, ${getOperName(symbol, side)}, totalMinute:${totalMinute}, priceLimit:${priceLimit}`)
+            bot.pushMessage(`条件委托 触发TWAP 成功\n${exchange}, ${symbol}\n${getOperName(symbol, side, true)} 分钟: ${totalMinute} 限价: ${priceLimit}`)
+        }
+        
     }
     condErr({ exchange, symbol, e }) {
         _logger.error(`Condition Order FAILED on ${exchange}, ${symbol}`, e)
