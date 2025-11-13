@@ -2,7 +2,7 @@
 
 import { SUPPORTED_EXCHANGES } from '../config.js'
 import { initExchangeMonitor, getExchangeMonitor } from './exchangeMonitor.js'
-import orderWatcher from './orderMonitor.js'
+import orderMonitor from './orderMonitor.js'
 
 import checkSpotSLTPOrder from '../checker/checkSpotSLTPOrder.js'
 import checkPerpSLTPOrder from '../checker/checkPerpSLTPOrder.js'
@@ -16,11 +16,13 @@ import logger from '../logger.js'
 class Monitor {
     /* 后台监控主函数 */
     async start() {
+        // 初始化委托单监控
+        await orderMonitor.init()
         // 初始化交易所监控
         await Promise.all(SUPPORTED_EXCHANGES.map(async (exch) => {
             const exchange = await initExchangeMonitor(exch)
             // exchange.onAccountUpdate(async (data) => {
-            //     this.orderWatcher.ordersGroupByExchange[exch]
+            //     this.orderMonitor.ordersGroupByExchange[exch]
             // });
             return exchange
         }))
@@ -28,7 +30,7 @@ class Monitor {
         // 保存 取消订阅函数
         let unsubs = []
         // 订阅订单更新时，以交易所为粒度，重新订阅相关交易对的行情更新和仓位更新
-        orderWatcher.onOrdersUpdate(({ ordersGroupByExchange }) => {
+        orderMonitor.onOrdersUpdate(({ ordersGroupByExchange }) => {
             global.__Force?.c()
             // console.log('orders update', orders);
             // 先取消之前的订阅

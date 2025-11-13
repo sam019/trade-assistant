@@ -36,7 +36,6 @@ import { isDev } from 'share/utils.js'
 import connectDB from './database/db.js'
 
 import monitor from './monitor/monitor.js'
-import orderMonitor from './monitor/orderMonitor.js'
 
 import orderRoute from './api/order.js'
 import marketRoute from './api/market.js'
@@ -67,7 +66,6 @@ async function init() {
         logger.warn('init server!')
 
         await connectDB()
-        await orderMonitor.init()
         await monitor.start()
 
         const app = new Hono()
