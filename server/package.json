@@ -5,8 +5,7 @@
     "dev": "node --env-file=.env --watch src/app.js",
     "build": "tsc src/app.js",
     "build-testnet": "tsc --env-file=.env.production.test",
-    "start": "node dist/index.js --env-file=.env",
-    "mongo": "mongod --config=\"c:/Program Files/MongoDB/server/8.2/bin/mongod.cfg\" && mongoose && rs.initiate()"
+    "start": "node dist/index.js --env-file=.env"
   },
   "dependencies": {
     "@hono/node-server": "^1.19.5",
@@ -15,10 +14,11 @@
     "hono": "^4.9.9",
     "lodash-es": "^4.17.21",
     "log4js": "^6.9.1",
-    "mongoose": "^8.18.3",
     "node-telegram-bot-api": "^0.66.0",
+    "sequelize": "^6.37.7",
     "share": "workspace:*",
-    "socket.io": "^4.8.1"
+    "socket.io": "^4.8.1",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",

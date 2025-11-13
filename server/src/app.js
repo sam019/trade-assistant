@@ -34,13 +34,18 @@ import Decimal from 'decimal.js'
 import { isDev } from 'share/utils.js'
 
 import connectDB from './database/db.js'
+
 import monitor from './monitor/monitor.js'
+import orderMonitor from './monitor/orderMonitor.js'
+
 import orderRoute from './api/order.js'
 import marketRoute from './api/market.js'
 import exchangeRoute from './api/exchange.js'
 import positionRoute from './api/position.js'
 import transferRoute from './api/transfer.js'
+
 import { authRouter, httpAuth } from './auth/auth.js'
+
 import socket from './socket/socket.js'
 import logger from './logger.js'
 import { getLocalIpAddress } from './utils.js'
@@ -60,8 +65,11 @@ if (isDev()) {
 async function init() {
     try {
         logger.warn('init server!')
+
         await connectDB()
-        monitor.start()
+        await orderMonitor.init()
+        await monitor.start()
+
         const app = new Hono()
 
         app.use('*', cors({
@@ -103,7 +111,7 @@ async function init() {
         const server = serve(
             serverParams,
             (info) => {
-                console.log(`Server is running on https://localhost:${info.port}`)
+                logger.info(`Server is running on https://localhost:${info.port}`)
             },
         )
         // console.log('corsOrigin', corsOrigin)

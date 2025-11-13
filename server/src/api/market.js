@@ -7,18 +7,28 @@ import { sleep } from 'share/utils.js'
 const app = new Hono()
 
 class FavoriteMarketsMonitor {
+    inited = false
+
     async init() {
         this.markets = await favouriteMarketsModel.find()
-        favouriteMarketsModel.watch().on('change', async (change) => {
+        favouriteMarketsModel.onUpdate(async (change) => {
             // console.log('favouriteMarkets change', change);
             // 订单变化时更新
             this.markets = await favouriteMarketsModel.find()
         })
+        this.inited = true
+    }
+    
+    async getMarkets() {
+        if (!this.inited) {
+            await this.init()
+        }
+        return this.markets
     }
 }
 
 const favoriteMarketsMonitor = new FavoriteMarketsMonitor()
-favoriteMarketsMonitor.init()
+// favoriteMarketsMonitor.init()
 
 /**
  * 
@@ -37,7 +47,7 @@ app.post('/search', async function searchMarkets(c) {
     const markets = exchangeMonitor.markets
     const limit = 10
     const matchMarket = {}
-    const favMarkets = favoriteMarketsMonitor.markets
+    const favMarkets = await favoriteMarketsMonitor.getMarkets()
     // console.log('favMarkets', favMarkets)
 
     if (!keywords) {
@@ -99,9 +109,9 @@ app.post('/addFavorite', async function addFavoriteMarket(c) {
     if (existing) {
         return c.json({ error: 'Market already in favourites' }, 500)
     }
-    const favMarket = new favouriteMarketsModel({ exchange, symbol })
-    const result = await favMarket.save()
-    return c.json(result)
+    const favMarket = await favouriteMarketsModel.create({ exchange, symbol })
+    // const result = await favMarket.save()
+    return c.json(favMarket)
 })
 
 app.post('/deleteFavorite', async function deleteFavoriteMarket(c) {

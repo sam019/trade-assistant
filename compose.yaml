@@ -10,19 +10,6 @@ secrets:
     SECRET_KEY_BINANCE:
         environment: SECRET_KEY_BINANCE
 services:
-    mongo:
-        image: mongo:latest
-        container_name: ta-mongo
-        restart: unless-stopped
-        ports:
-            - 27017:27017
-        # environment:
-            # - MONGO_INITDB_ROOT_USERNAME=${ADMIN:-root}
-            # - MONGO_INITDB_ROOT_PASSWORD=${PASSWORD:?error}
-        volumes:
-            # - c:/Program Files/MongoDB/server/8.2/bin/data:/data/db
-            - data_db:/data/db
-        command: --oplogSize 192 --replSet rs0 --bind_ip_all
     server:
         build:
             context: .

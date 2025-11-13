@@ -3,7 +3,7 @@ import { ORDER_STATES } from 'share/const.js'
 import { checkSymbol } from 'share/utils.js'
 import logger from '../logger.js'
 
-export class OrderWatcher {
+export class OrderMonitor {
     static STATUS = {
         PENDDING: 'pendding',
         CLOSED: 'closed',
@@ -16,8 +16,8 @@ export class OrderWatcher {
         this.orderStatus = new Map()
     }
     async init() {
-        this.fetch()
-        orderModel.watch().on('change', async () => {
+        await this.fetch()
+        orderModel.onUpdate(async () => {
             // console.log('change', change);
             // 订单变化时更新
             await this.fetch()
@@ -79,7 +79,7 @@ export class OrderWatcher {
     }
 
     // setOrderStatus(id, status) {
-    //     if (status === OrderWatcher.STATUS.CLOSED) {
+    //     if (status === OrderMonitor.STATUS.CLOSED) {
     //         this.orderStatus.delete(id);
     //     }
     //     // const order = this.orders.find(order => order.id === id);
@@ -91,7 +91,7 @@ export class OrderWatcher {
     // }
 
     markOrderDealing(id) {
-        this.orderStatus.set(id, OrderWatcher.STATUS.PENDDING)
+        this.orderStatus.set(id, OrderMonitor.STATUS.PENDDING)
     }
 
     unmarkOrderDealing(id) {
@@ -99,7 +99,7 @@ export class OrderWatcher {
     }
 
     isOrderDealing(id) {
-        return this.orderStatus.get(id) === OrderWatcher.STATUS.PENDDING
+        return this.orderStatus.get(id) === OrderMonitor.STATUS.PENDDING
     }
 
     async findOpeningOrders() {
@@ -107,11 +107,11 @@ export class OrderWatcher {
     }
 
     async creatOrder(params = {}) {
-        const order = new orderModel({
+        const order = await orderModel.create({
             ...params,
             state: ORDER_STATES.OPENING,
         })
-        await order.save()
+        // await order.save()
         return order
     }
 
@@ -129,8 +129,8 @@ export class OrderWatcher {
         return await orderModel.findByIdAndDelete(id)
     }
 }
-const orderWatcher = new OrderWatcher()
+const orderMonitor = new OrderMonitor()
 
-orderWatcher.init()
+// orderMonitor.init()
 
-export default orderWatcher
+export default orderMonitor

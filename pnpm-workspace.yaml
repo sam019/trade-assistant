@@ -1,4 +1,7 @@
 packages:
-  - 'server'
-  - 'web'
-  - 'share'
+  - server
+  - web
+  - share
+
+onlyBuiltDependencies:
+  - sqlite3

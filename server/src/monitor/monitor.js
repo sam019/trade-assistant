@@ -12,6 +12,7 @@ import checkPerpCondOrder from '../checker/checkPerpCondOrder.js'
 import { ORDER_TYPES } from 'share/const.js'
 import { checkSymbol } from 'share/utils.js'
 import logger from '../logger.js'
+
 class Monitor {
     /* 后台监控主函数 */
     async start() {
@@ -90,4 +91,6 @@ class Monitor {
     }
 }
 
-export default new Monitor()
+const monitor = new Monitor()
+
+export default monitor
