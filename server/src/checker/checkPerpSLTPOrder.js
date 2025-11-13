@@ -98,7 +98,9 @@ export default async function checPerpSLTPOrder(order, position) {
                 result = await service.createInversePerpMarketOrder(params)
             }
 
-            logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side: params.side, cost: result.cost, price: result.price })
+            if (!useTWAP) {
+                logger.sltpSucc({ exchange, symbol, isSL: !isTpTriggered, side: params.side, cost: result.cost, price: result.price })
+            }
             // console.log(`仓位止损结算成功, 交易所:${exchange} 交易对:${symbol} 结算价格:${result.price} 卖出数量:${result.filled}张`)
             await orderWatcher.resolveOrder(_id)
             // console.log('order delete success', dOR)

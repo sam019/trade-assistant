@@ -71,7 +71,9 @@ export default async function checkSpotSLTPOrder(order, ticker) {
             // console.log(`触发条件委托订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${triggerPrice} 最新价格:${lastPrice} 买入数量:${amount}${cSymbol[unit]}`)
             const result = await service.createSpotMarketOrder(params, options)
 
-            logger.condSucc({ exchange, symbol, side: params.side, cost: result.cost, price: result.price, unit: cSymbol.base })
+            if (!useTWAP) {
+                logger.condSucc({ exchange, symbol, side: params.side, cost: result.cost, price: result.price, unit: cSymbol.base })
+            }
             // console.log(`条件委托订单结算成功, 交易所:${exchange} 交易对:${symbol} 成交价格:${result.price} 买入数量:${result.filled}${cSymbol.base}`)
             await orderWatcher.resolveOrder(_id)
             // orderWatcher.unmarkOrderDealing(_id);
