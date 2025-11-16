@@ -493,8 +493,8 @@ export default {
             this.orderWithSLTP = order.withSLTP
             this.triggerPrice = order.triggerPrice
             this.orderUseTWAP = order.useTWAP
-            this.totalMinute = order.totalMinute || 1
-            this.priceLimit = order.priceLimit
+            this.twapTotalMinute = order.totalMinute || 1
+            this.twapPriceLimit = order.priceLimit
 
             const cSymbol = checkSymbol(order.symbol)
             if (cSymbol.isSpot) {

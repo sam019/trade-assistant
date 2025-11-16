@@ -61,15 +61,20 @@ export default async function checPerpSLTPOrder(order, position) {
         // console.log(position)
         // 严谨判断,既有可能没有改仓位,也可能因为网络延迟未获取仓位
         if (!position) {
-            throw new Error('错误：无法获取symbol position：' + symbol)
+            throw new Error('错误: 无法获取symbol position: ' + symbol)
         }
         
         const isSlTriggered = slPrice && (position.side === POSITION_SIDES.LONG ? position.markPrice <= slPrice : position.markPrice >= slPrice)
         const isTpTriggered = tpPrice && (position.side === POSITION_SIDES.LONG ? position.markPrice >= tpPrice : position.markPrice <= tpPrice)
         if (isSlTriggered || isTpTriggered || global.__Force?.v()) {
-            // 判断是否止损
-            // console.log(`触发仓位止损, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 标记价格:${position.markPrice} 卖出数量:${amount}`)
             orderWatcher.markOrderDealing(_id)
+
+            // 止损止盈时有可能正在twap建仓，需要立即停止
+            const twapOrder = getExchangeMonitor(exchange).getTWAPOrder(symbol)
+            if (twapOrder) {
+                logger.info('止损触发, 终止TWAP')
+                getExchangeMonitor(exchange).closeTWAPOrder(symbol)
+            }
 
             const cSymbol = checkSymbol(symbol)
             const params = {

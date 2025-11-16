@@ -32,7 +32,7 @@ export default async function createSpotSLTPOrder(data) {
         const cSymbol = checkSymbol(order.symbol)
         const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]?.free
         if (!balance) {
-            throw new Error('止盈止损数量错误：没有余额')
+            throw new Error('止盈止损数量错误: 没有余额')
         }
         params.amount = new Decimal(amountPct).mul(balance).div(100).toDecimalPlaces(getPrecisionLength(market.precision.base)).toNumber()
         params.unit = ORDER_AMOUNT_TYPES.BASE

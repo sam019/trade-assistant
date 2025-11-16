@@ -145,7 +145,7 @@ class Logger {
         }
     }
     sltpErr({ exchange, symbol, e }) {
-        _logger.trace(`SLTP Order FAILED on ${exchange}, ${symbol}`, e)
+        _logger.error(`SLTP Order FAILED on ${exchange}, ${symbol}`, e)
         bot.pushMessage(`止盈止损 失败\n${exchange} ${symbol}\n${e.message}`)
     }
 

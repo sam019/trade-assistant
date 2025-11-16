@@ -22,11 +22,11 @@ export default async function createInversePerpMarketOrder(data, options = {}) {
         }
     }
     if (reduceOnly && !position) {
-        throw new Error('错误：未检测到仓位')
+        throw new Error('错误: 未检测到仓位')
     }
     // console.log('isReduce', isReduce)
     if (reduceOnly !== isReduce) {
-        throw new Error('错误：前后端增减仓逻辑协调错误')
+        throw new Error('错误: 前后端增减仓逻辑协调错误')
     }
 
     let lastPrice

@@ -35,6 +35,9 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
         while (remainAmount > 0) {
             const sign = Date.now()
             try {
+                const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
+                
+                // 订单状态检测和下单之间最好不能有任何异步过程,防止在异步过程中,订单被取消或发生其他变化,无法被检测到
                 twapState = exchangeMonitor.getTWAPOrder(symbol)
                 if (!twapState) {
                     logger.info('TWAP订单已取消, 终止TWAP')
@@ -47,8 +50,6 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                     await sleep(TWAP_INTERVAL, sign)
                     continue
                 }
-                
-                const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
 
                 if (side === ORDER_SIDES.BUY && withSLTP) {
                 // 现货带有sltp的twap订单只能是买单，因为卖单不支持sltp
@@ -107,8 +108,8 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                 logger.info(`市价单(TWAP)成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(${market.base})`)
 
                 remainAmount = new Decimal(remainAmount).sub(params.quoteOrderQty ? result.cost : result.filled).toNumber()
-                logger.info(`剩余数量:${remainAmount}(${unitName})`)
                 twapState.filledAmount = new Decimal(twapState.totalAmount).sub(remainAmount).toNumber()
+                logger.info(`总成交量${twapState.fil} 剩余数量:${remainAmount}(${unitName})`)
                 
                 if (withSLTP) {
                     if (!sltpOrder) {
@@ -141,7 +142,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                 // if (isDev()) {
                 //     throw e
                 // }
-                logger.error('createTWAPOrder error: ', e.message)
+                logger.error('createTWAPOrder error: ', e)
                 await sleep(TWAP_INTERVAL, sign)
             }
         }

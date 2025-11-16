@@ -34,7 +34,7 @@ function getRealAmount({ balance, lastPrice, _id, amount, unit, exchange, symbol
             if (new Decimal(amount).mul(lastPrice).toNumber() > balance.free) {
                 realAmount = balance.free
                 realUnit = ORDER_AMOUNT_TYPES.QUOTE
-                console.log(`止盈止损订单数量不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 卖出数量:${realAmount}${cSymbol.QUOTE}`)
+                console.log(`委托订单余额不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 卖出数量:${realAmount}${cSymbol.QUOTE}`)
             }
         } else {
             if (amount > balance.free) {
@@ -56,7 +56,7 @@ export default async function checkPerpCondOrder(order, ticker) {
         }
         const lastPrice = ticker.last
         if (!lastPrice) {
-            throw new Error('错误：无法获取tick：' + symbol)
+            throw new Error('错误: 无法获取tick: ' + symbol)
         }
         
         // console.log('global.__Force?.v()', global.__Force?.v())

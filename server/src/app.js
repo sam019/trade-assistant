@@ -24,6 +24,7 @@
  *            佛祖保佑       财源滚滚     永无BUG
  */
 import fs from 'fs'
+import path from 'path'
 import { createServer } from 'node:https'
 
 import { serve } from '@hono/node-server'
@@ -102,8 +103,8 @@ async function init() {
         if (isDev()) {
             serverParams.createServer = createServer
             serverParams.serverOptions = {
-                key: fs.readFileSync('../localhost+3-key.pem'),
-                cert: fs.readFileSync('../localhost+3.pem'),
+                key: fs.readFileSync(path.join(import.meta.dirname, '../../localhost+3-key.pem')),
+                cert: fs.readFileSync(path.join(import.meta.dirname, '../../localhost+3.pem')),
             }
         }
         const server = serve(

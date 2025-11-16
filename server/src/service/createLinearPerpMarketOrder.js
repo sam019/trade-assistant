@@ -37,8 +37,17 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
         while (remainAmount > 0) {
             const sign = Date.now()
             try {
+                let lastPrice
+                if (reduceOnly) {
+                    ({ markPrice: lastPrice } = await exchangeMonitor.awaitPositionsUpdate(symbol))
+                } else {
+                    ({ last: lastPrice } = await exchangeMonitor.awaitTickersUpdate(symbol))
+                }
+
+                // 订单状态检测和下单之间最好不能有任何异步过程,防止在异步过程中,订单被取消或发生其他变化,无法被检测到
                 twapState = exchangeMonitor.getTWAPOrder(symbol)
-                if (!exchangeMonitor.getTWAPOrder(symbol)) {
+                // console.log('twapState', twapState)
+                if (!twapState) {
                     logger.info('TWAP订单已取消, 终止TWAP')
                     break
                 }
@@ -48,13 +57,6 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                     logger.info('TWAP订单已暂停')
                     await sleep(TWAP_INTERVAL, sign)
                     continue
-                }
-
-                let lastPrice
-                if (reduceOnly) {
-                    ({ markPrice: lastPrice } = await exchangeMonitor.awaitPositionsUpdate(symbol))
-                } else {
-                    ({ last: lastPrice } = await exchangeMonitor.awaitTickersUpdate(symbol))
                 }
 
                 const realMinQuantity = Math.max(
@@ -120,15 +122,18 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                 logger.info(`市价单(TWAP)成交 ${exchange} ${symbol} ${side} 成交价格:${result.average} 成交额:${result.cost}(${market.quote}) 成交量:${result.filled}(张)`)
                 // todo 向前端推送twap进度
                 remainAmount = new Decimal(remainAmount).sub(result.filled).toNumber()
-                logger.info(`剩余数量:${remainAmount}(张)`)
                 twapState.filledAmount = new Decimal(twapState.filledAmount).add(result.filled).toNumber()
+                logger.info(`总成交量:${twapState.filledAmount} 剩余数量:${remainAmount}(张)`)
+
                 // await getExchangeMonitor(exchange).awaitPositionsUpdate([symbol])
 
                 if (withSLTP) {
                     if (!sltpOrder) {
                         sltpOrder = await orderWatcher.creatOrder({ ...sltpParams, amount: twapState.filledAmount, unit: ORDER_AMOUNT_TYPES.CONTRACT })
+                        // console.log('sltpOrder', sltpOrder._id)
                     } else {
                         sltpOrder = await orderWatcher.updateOrder(sltpOrder._id, { amount: twapState.filledAmount })
+                        // console.log('sltpOrder', sltpOrder._id)
                     }
                 }
 
@@ -152,7 +157,7 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                 // if (isDev()) {
                 //     throw e
                 // }
-                logger.error('createTWAPOrder error: ', e.message)
+                logger.error('createTWAPOrder error: ', e)
                 await sleep(TWAP_INTERVAL, sign)
             }
         }
@@ -178,11 +183,11 @@ export default async function createLinearPerpMarketOrder(data, options = {}) {
     }
     // console.log('balance keys', getExchangeMonitor(exchange).balance, market.swap ? market.subType : market.type, market.quote)
     if (reduceOnly && !position) {
-        throw new Error('错误：未检测到仓位')
+        throw new Error('错误: 未检测到仓位')
     }
     // console.log('isReduce', isReduce)
     if (reduceOnly !== isReduce) {
-        throw new Error('错误：前后端增减仓逻辑协调错误')
+        throw new Error('错误: 前后端增减仓逻辑协调错误')
     }
     let lastPrice
     if (reduceOnly) {

@@ -31,7 +31,7 @@ export default async function createSpotConditionOrder(data) {
         const cSymbol = checkSymbol(order.symbol)
         const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]?.free
         if (!balance) {
-            throw new Error('条件委托数量错误：没有余额')
+            throw new Error('条件委托数量错误: 没有余额')
         }
         params.amount = new Decimal(amountPct).mul(balance).div(100).toDecimalPlaces(getPrecisionLength(market.precision.quote)).toNumber()
         params.unit = ORDER_AMOUNT_TYPES.QUOTE

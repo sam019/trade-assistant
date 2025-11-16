@@ -7,7 +7,7 @@ import { Sequelize, DataTypes } from 'sequelize'
 import logger from '../logger.js'
 import { isTESTNET } from '../utils.js'
 
-// console.log(path.join(import.meta.dirname, `../../../${isTESTNET() ? 'db-test' : 'database'}.sqlite`))
+// console.log(path.join(import.meta.dirname, `../../../${isTESTNET() ? 'db-test' : 'database'}.sqlite`), path.resolve(import.meta.dirname, `../../../${isTESTNET() ? 'db-test' : 'database'}.sqlite`))
 const sequelize = new Sequelize({
     dialect: 'sqlite',
     storage: path.join(import.meta.dirname, `../../../database/${isTESTNET() ? 'db-test' : 'database'}.sqlite`),
@@ -48,12 +48,16 @@ class Model {
     async find(options = {}) {
         return await this._Model.findAll({
             where: options,
+        }, {
+            raw: true,
         })
     }
 
     async findOne(options = {}) {
         return await this._Model.findOne({
             where: options,
+        }, {
+            raw: true,
         })
     }
 
@@ -66,7 +70,7 @@ class Model {
     }
 
     async findOneAndDelete(options = {}) {
-        const model = await this.findOne(options)
+        const model = await this._Model.findOne({ where: options })
         // console.log('model', model)
         if (!model) {
             throw new Error('model not find')
@@ -79,19 +83,19 @@ class Model {
         if (!model) {
             throw new Error('model not find')
         }
-        return await model.update(data)
+        return (await model.update(data)).get()
     }
 
     async findOneAndUpdate(options = {}, data) {
-        const model = await this.findOne(options)
+        const model = await this._Model.findOne({ where: options })
         if (!model) {
             throw new Error('model not find')
         }
-        return await model.update(data)
+        return (await model.update(data)).get()
     }
 
     async create(data) {
-        return await this._Model.create(data)
+        return (await this._Model.create(data)).get()
     }
 }
 
@@ -104,7 +108,7 @@ const Order = sequelize.define('Order', {
     },
     exchange: DataTypes.STRING, // 交易所
     symbol: DataTypes.STRING, // 交易对
-    type: DataTypes.STRING, // 类型：SLTP CONDITION
+    type: DataTypes.STRING, // 类型: SLTP CONDITION
     slPrice: DataTypes.NUMBER, // 止损价（sltp, condition）
     tpPrice: DataTypes.NUMBER, // 止盈价（sltp, condition）
     triggerPrice: DataTypes.NUMBER, // 触发价（condition）

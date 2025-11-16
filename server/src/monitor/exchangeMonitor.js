@@ -108,7 +108,7 @@ class ExchangeModel {
         try {
             await this.exchange.loadMarkets()
         } catch (e) {
-            logger.error('loadmarkets error: ', e.message)
+            logger.error('loadmarkets error: ', e)
             await sleep(this.errRestTime)
             this.loadmarkets()
         }
@@ -177,7 +177,7 @@ class ExchangeModel {
                 }
                 await sleep(this.fetchInterval, sign)
             } catch (e) {
-                logger.error('WatchBalance error: ', e.message)
+                logger.error('WatchBalance error: ', e)
                 await sleep(this.errRestTime)
             }
         }
@@ -236,7 +236,7 @@ class ExchangeModel {
                     this.awaitPositionsUpdateCb.delete(cb)
                 })
                 // throw e;
-                logger.error('WatchPositions error: ', e.message)
+                logger.error('WatchPositions error: ', e)
                 await sleep(this.errRestTime)
             }
         }
@@ -369,7 +369,7 @@ class ExchangeModel {
                 //     console.log(this.exchange.id, 'watchTickers failed with:', e.message)
                 //     // retry or whatever
                 // }
-                logger.error('WatchTickers error: ', e.message)
+                logger.error('WatchTickers error: ', e)
                 await sleep(this.errRestTime)
             }
         }

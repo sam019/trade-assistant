@@ -35,7 +35,7 @@ if (!isDev()) {
             bot.sendMessage(chatId, message || '无数据')
         } catch (e) {
         // console.log(e)
-            logger.error('Telegram Bot error: ', e.message)
+            logger.error('Telegram Bot error: ', e)
         }
     })
 }

@@ -12,7 +12,7 @@ function getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol
     let realAmount = amount, realUnit = unit
     //判断余额
     if (!balance) {
-        // throw new Error('止损订单检测错误：无法获取余额');
+        // throw new Error('止损订单检测错误: 无法获取余额');
         console.log('无法获取余额数据，尝试直接下单')
     } else if (!balance.free) {
         console.log('止盈止损订单余额为0，已自动取消')
@@ -43,28 +43,38 @@ export default async function checkSpotSLTPrder(order, ticker) {
         }
         const lastPrice = ticker.last
         if (!lastPrice) {
-            throw new Error('错误：无法获取tick：' + symbol)
+            throw new Error('错误: 无法获取tick: ' + symbol)
         }
+            
         // console.log('check order', order.slPrice, order.tpPrice, lastPrice)
-        const cSymbol = checkSymbol(symbol)
-        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]
-        const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
-        const params = {
-            exchange,
-            symbol,
-            amount: realAmount,
-            unit: realUnit,
-            side: ORDER_SIDES.SELL,
-            useTWAP,
-            totalMinute,
-            priceLimit,
-        }
+        
         // const balance = unit === ORDER_AMOUNT_TYPES.BASE ? getExchangeMonitor(exchange).balance.spot[cSymbol[unit]] : new Decimal(amount).div(lastPrice)
         // console.log('balance', balance)
         const isSlTriggered = slPrice && (lastPrice <= slPrice) // 判断是否止损
         const isTpTriggered = tpPrice && (lastPrice >= tpPrice) // 判断是否止盈
         if (isSlTriggered || isTpTriggered || global.__Force?.v()) {
             orderWatcher.markOrderDealing(_id)
+
+            // 止损止盈时有可能正在twap建仓，需要立即停止
+            const twapOrder = getExchangeMonitor(exchange).getTWAPOrder(symbol)
+            if (twapOrder) {
+                logger.info('止损触发, 终止TWAP')
+                getExchangeMonitor(exchange).closeTWAPOrder(symbol)
+            }
+
+            const cSymbol = checkSymbol(symbol)
+            const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]
+            const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
+            const params = {
+                exchange,
+                symbol,
+                amount: realAmount,
+                unit: realUnit,
+                side: ORDER_SIDES.SELL,
+                useTWAP,
+                totalMinute,
+                priceLimit,
+            }
 
             const triggerPrice = isTpTriggered ? tpPrice : slPrice
             // console.log(`触发止损订单, 交易所:${exchange} 交易对:${symbol} 触发价格:${slPrice} 最新价格:${lastPrice} 卖出数量:${amount}${cSymbol[unit]}`)

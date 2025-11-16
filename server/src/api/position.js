@@ -21,7 +21,7 @@ app.post('/close', async function closePosition(c) {
     const { exchange, symbol } = body
     const position = getExchangeMonitor(exchange).positions.find(pos => pos.symbol === symbol)
     if (!position) {
-        throw new Error('错误：未查询到仓位')
+        throw new Error('错误: 未查询到仓位')
     }
     // const result = await getExchangeMonitor(exchange).exchange.closePosition(symbol);
     const side = position.side === POSITION_SIDES.LONG ? ORDER_SIDES.SELL : ORDER_SIDES.BUY

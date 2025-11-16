@@ -27,7 +27,7 @@ function getRealAmount({ balance, _id, unit, lastPrice, amount, exchange, symbol
         if (new Decimal(amount).div(lastPrice).toNumber() > balance.free) {
             realAmount = balance.free
             realUnit = ORDER_AMOUNT_TYPES.QUOTE
-            console.log(`止盈止损订单数量不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 卖出数量:${realAmount}${cSymbol[realUnit]}`)
+            console.log(`委托订单余额不足, 仅设置部分成交。交易所:${exchange} 交易对:${symbol} 卖出数量:${realAmount}${cSymbol[realUnit]}`)
         }
     }
     return { realAmount, realUnit }
@@ -41,14 +41,15 @@ export default async function checkSpotSLTPOrder(order, ticker) {
         }
         const lastPrice = ticker.last
         if (!lastPrice) {
-            throw new Error('错误：无法获取tick：' + symbol)
+            throw new Error('错误: 无法获取tick: ' + symbol)
         }
+
         // console.log('check order', triggerPrice, lastPrice)
-        const cSymbol = checkSymbol(symbol)
-        const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]
-        // console.log(getExchangeMonitor(exchange).balance.spot[currency])
         if (lastPrice <= triggerPrice || global.__Force?.v()) {
             orderWatcher.markOrderDealing(_id)
+
+            const cSymbol = checkSymbol(symbol)
+            const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.quote]
 
             const { realAmount, realUnit } = getRealAmount({ balance, lastPrice, amount, unit, _id, exchange, symbol, cSymbol })
             const params = {
