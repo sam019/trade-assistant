@@ -54,6 +54,8 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
                 // 现货带有sltp的twap订单只能是买单，因为卖单不支持sltp
                     if (sltpParams.slPrice && lastPrice < sltpParams.slPrice) {
                         // 跌破止损价，停止twap
+                        twapState.state = ORDER_STATES.CLOSED
+                        exchangeMonitor.updateTWAPOrder(twapState)
                         logger.info('止损已触发, 终止TWAP')
                         break
                     }

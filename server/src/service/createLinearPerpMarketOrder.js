@@ -81,6 +81,8 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                     }
                     // 越过止损价，停止twap
                     if (isSLTriggered) {
+                        twapState.state = ORDER_STATES.CLOSED
+                        exchangeMonitor.updateTWAPOrder(twapState)
                         logger.info('止损已触发, 终止TWAP')
                         break
                     }

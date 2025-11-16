@@ -66,8 +66,8 @@ export default {
         isOpening() {
             return this.order.state === ORDER_STATES.OPENING
         },
-        isResovled() {
-            return this.order.state === ORDER_STATES.RESOLVED
+        canToggle() {
+            return this.order.state === ORDER_STATES.OPENING || this.order.state === ORDER_STATES.STOPED
         },
         toggleLabel() {
             return this.order.state === ORDER_STATES.STOPED ? '开启' : '暂停'
@@ -109,7 +109,7 @@ export default {
                 </div>
             </div>
             <div class="control">
-                <el-button v-if="!isResovled" plain size="small" type="info" style="color: white"
+                <el-button v-if="canToggle" plain size="small" type="info" style="color: white"
                     @click="$emit('toggle', order)">{{ toggleLabel }}</el-button>
                 <el-button plain size="small" type="primary" @click="$emit('close', order)">关闭</el-button>
             </div>
