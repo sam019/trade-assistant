@@ -30,3 +30,8 @@ lerna-debug.log*
 # dist
 dist/
 sift/
+
+#database
+database/
+
+README.md

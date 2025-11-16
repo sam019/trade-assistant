@@ -7,13 +7,14 @@ import { SUPPORTED_EXCHANGES } from '../config.js'
 import { MARKET_TYPES, ORDER_STATES } from 'share/const.js'
 import { checkSymbol, sleep, isDev, withTimeout } from 'share/utils.js'
 import logger from '../logger.js'
+import { isTESTNET } from '../utils.js'
 
 const exchangeModels = {}
 
 class ExchangeModel {
     constructor(exchange) {
         // console.log('process.env', process.env)
-        this.TESTNET = (process.env.TESTNET || '').toUpperCase() === 'TRUE'
+        this.TESTNET = isTESTNET()
         // console.log('this.TESTNET', this.TESTNET)
         this.fetchInterval = 1000
         this.errRestTime = 5000

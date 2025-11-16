@@ -79,11 +79,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  share:
-    dependencies:
-      decimal.js:
-        specifier: ^10.6.0
-        version: 10.6.0
+  share: {}
 
   web:
     dependencies:

@@ -1,13 +1,16 @@
 
+import path from 'path'
+
 import { Sequelize, DataTypes } from 'sequelize'
 // import { isDev } from 'share/utils.js'
 
 import logger from '../logger.js'
+import { isTESTNET } from '../utils.js'
 
-
+// console.log(path.join(import.meta.dirname, `../../../${isTESTNET() ? 'db-test' : 'database'}.sqlite`))
 const sequelize = new Sequelize({
     dialect: 'sqlite',
-    storage: '../../../database.sqlite',
+    storage: path.join(import.meta.dirname, `../../../database/${isTESTNET() ? 'db-test' : 'database'}.sqlite`),
     logging: false,
 })
 

@@ -1,5 +1,3 @@
-// import Decimal from 'decimal.js'
-
 export function getPrecisionLength(decimal = 0) {
     return (Number(decimal) + 1).toString().split('.')[1]?.length || 0
 }
@@ -62,19 +60,6 @@ export function formatTimestamp(timestamp) {
 export function isMobileDevice() {
     return location.hostname !== 'localhost'
 }
-
-// export function getPrecisionAndLimit(market, lastPrice) {
-//     const basePrecision = getPrecisionLength(market.precision.amount)
-//     const quotePrecision = getPrecisionLength(market.precision.price)
-//     const minBase = Math.min(market.limits.amount.min, new Decimal(market.limits.cost.min).div(lastPrice).toDecimalPlaces(basePrecision).toNumber())
-//     const minQuote = Math.min(market.limits.cost.min, new Decimal(market.limits.amount.min).mul(lastPrice).toDecimalPlaces(quotePrecision).toNumber())
-//     return {
-//         basePrecision,
-//         quotePrecision,
-//         minBase,
-//         minQuote,
-//     }
-// }
 
 export function withTimeout(promise, ms, timeoutError = new Error('Promise timed out')) {
     const timeout = new Promise((resolve, reject) => {
