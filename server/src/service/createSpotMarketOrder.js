@@ -36,7 +36,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
             const sign = Date.now()
             try {
                 const { last: lastPrice } = await getExchangeMonitor(exchange).awaitTickersUpdate(symbol)
-                
+
                 // 订单状态检测和下单之间最好不能有任何异步过程,防止在异步过程中,订单被取消或发生其他变化,无法被检测到
                 twapState = exchangeMonitor.getTWAPOrder(symbol)
                 if (!twapState) {
@@ -109,7 +109,7 @@ async function createTWAPOrder({ exchange, symbol, side, params, withSLTP, sltpP
 
                 remainAmount = new Decimal(remainAmount).sub(params.quoteOrderQty ? result.cost : result.filled).toNumber()
                 twapState.filledAmount = new Decimal(twapState.totalAmount).sub(remainAmount).toNumber()
-                logger.info(`总成交量${twapState.fil} 剩余数量:${remainAmount}(${unitName})`)
+                logger.info(`总成交量${twapState.filledAmount} 剩余数量:${remainAmount}(${unitName})`)
                 
                 if (withSLTP) {
                     if (!sltpOrder) {
