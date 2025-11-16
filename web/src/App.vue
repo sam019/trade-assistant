@@ -490,9 +490,9 @@ export default {
             this.orderType = order.type || ORDER_TYPES.SLTP
             this.slPrice = order.slPrice
             this.tpPrice = order.tpPrice
-            this.orderWithSLTP = order.withSLTP
+            this.orderWithSLTP = !!order.withSLTP
             this.triggerPrice = order.triggerPrice
-            this.orderUseTWAP = order.useTWAP
+            this.orderUseTWAP = !!order.useTWAP
             this.twapTotalMinute = order.totalMinute || 1
             this.twapPriceLimit = order.priceLimit
 
