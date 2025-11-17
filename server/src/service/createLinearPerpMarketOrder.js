@@ -6,6 +6,7 @@ import { getPrecisionLength, sleep, isDev } from 'share/utils.js'
 import { getExchangeMonitor } from '../monitor/exchangeMonitor.js'
 import orderWatcher from '../monitor/orderMonitor.js'
 import logger from '../logger.js'
+import { isMarginInsufficientErr } from '../utils.js'
 
 export async function createTWAPOrder({ exchange, symbol, side, params, leverage, withSLTP, sltpParams, totalMinute, priceLimit, market }) {
     const stepNum = Math.ceil(totalMinute * 60 * 1000 / TWAP_INTERVAL)
@@ -157,8 +158,21 @@ export async function createTWAPOrder({ exchange, symbol, side, params, leverage
                 // if (isDev()) {
                 //     throw e
                 // }
-                logger.error('createTWAPOrder error: ', e)
-                await sleep(TWAP_INTERVAL, sign)
+                
+
+                let sleepTime = TWAP_INTERVAL
+                if (isMarginInsufficientErr(e)) {
+                    
+                    // console.log('remainAmount', remainAmount)
+                    // 交易所提示余额不足，可能是价格变动导致合约需要的保证金变化，所以减小下单数量
+                    remainAmount = new Decimal(remainAmount).mul(0.995).toDecimalPlaces(precision).toNumber()
+                    logger.warn('保证金余额不足, 尝试减少下单数量, 新数量: ', remainAmount)
+                    // console.log('remainAmount', remainAmount)
+                    sleepTime = 1000
+                } else {
+                    logger.error('createTWAPOrder error: ', e)
+                }
+                await sleep(sleepTime, sign)
             }
         }
     })

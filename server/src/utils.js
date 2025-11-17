@@ -1,5 +1,9 @@
 import os from 'os'
 
+import ccxt from 'ccxt'
+
+import { EXCHANGES } from 'share/const.js'
+
 // export function getPrecisionAndLimit(market, lastPrice) {
 //     const basePrecision = getPrecisionLength(market.precision.amount)
 //     const quotePrecision = getPrecisionLength(market.precision.price)
@@ -35,4 +39,26 @@ export function getLocalIpAddress() {
 
 export function isTESTNET() {
     return (process.env.TESTNET || '').toUpperCase() === 'TRUE'
+}
+
+export function parseError(e) {
+    // e.message: binance { "code": -2019, "message": "Margin is insuffcient" }
+    const blankIndex = e.message.indexOf(' ') // ccxt返回的错误格式，第一个空格前是交易所名，后面是交易所返回的错误对象string
+    const exchange = e.message.substr(0, blankIndex)
+    const info = JSON.parse(e.message.substr(blankIndex + 1))
+    return {
+        exchange,
+        ...info,
+    }
+}
+
+export function isMarginInsufficientErr(e) {
+    if (!(e instanceof ccxt.ExchangeError)) {
+        return false
+    }
+    const data = parseError(e)
+    if (data.exchange === EXCHANGES.BINANCE) {
+        return data.code === -2019
+    }
+    return false
 }
