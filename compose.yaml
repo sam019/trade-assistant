@@ -33,8 +33,6 @@ services:
             - CHAT_ID
             - API_KEY_BINANCE
             - SECRET_KEY_BINANCE
-        depends_on:
-            - mongo
     web:
         build: 
             context: .
@@ -51,8 +49,6 @@ services:
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
-        # depends_on:
-        #     - server
 volumes:
     data_db:
     Caddy_data:
