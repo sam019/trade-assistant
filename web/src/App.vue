@@ -260,17 +260,23 @@ export default {
             }
         },
         // 前端不需要做精确校验
-        handleAmountChange(amount) {
-            // console.log('handleAmountChange', amount);
+        async handleAmountChange(amount, async = false) {
+            // console.log('handleAmountChange', amount)
             if (!amount || amount <= 0) {
                 this.orderAmount = null
                 this.orderAmountPct = 0
                 return
             }
+
+            if (async) {
+                await this.$nextTick()
+            }
+
             if (amount > this.avaiableOrderAmount) {
                 amount = this.avaiableOrderAmount
             }
             this.orderAmount = new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber()
+            // console.log(amount, this.avaiableOrderAmount, this.getPrecisionByUnit(this.orderAmountUnit))
             this.orderAmountPct = new Decimal(this.orderAmount || 0).div(this.avaiableOrderAmount).mul(100).floor().toNumber()
             // console.log('orderAmount', this.orderAmount, new Decimal(amount).toDecimalPlaces(this.getPrecisionByUnit(this.orderAmountUnit)).toNumber())
         },
@@ -503,10 +509,11 @@ export default {
             } else {
                 if (order.unit === ORDER_AMOUNT_TYPES.CONTRACT) {
                     this.orderAmountUnit = cSymbol.isLinear ? ORDER_AMOUNT_TYPES.BASE : ORDER_AMOUNT_TYPES.QUOTE
-                    this.handleAmountChange(new Decimal(order.amount).mul(market.contractSize).toNumber())
+                    // console.log(new Decimal(order.amount).mul(market.contractSize).toNumber())
+                    this.handleAmountChange(new Decimal(order.amount).mul(market.contractSize).toNumber(), true)
                 } else {
                     this.orderAmountUnit = order.unit
-                    this.handleAmountChange(order.amount)
+                    this.handleAmountChange(order.amount, true)
                 }
             }
 
@@ -778,6 +785,7 @@ export default {
                     // console.log('LinearPerp pos total amount: ', this.positions, this.market.symbol);
                     if (this.orderAmountUnit === ORDER_AMOUNT_TYPES.BASE) {
                         if (this.curPosition?.contracts) {
+                            // console.log(this.curPosition.contracts, this.curPosition.contractSize, new Decimal(this.curPosition.contracts).mul(this.curPosition.contractSize).toNumber())
                             return new Decimal(this.curPosition.contracts).mul(this.curPosition.contractSize).toNumber()
                         } else {
                             return 0
