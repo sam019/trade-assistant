@@ -502,12 +502,16 @@ export default {
                 this.handleAmountChange(order.amount)
             } else {
                 if (order.unit === ORDER_AMOUNT_TYPES.CONTRACT) {
-                    this.orderAmountUnit = cSymbol.contractBase
+                    this.orderAmountUnit = cSymbol.isLinear ? ORDER_AMOUNT_TYPES.BASE : ORDER_AMOUNT_TYPES.QUOTE
                     this.handleAmountChange(new Decimal(order.amount).mul(market.contractSize).toNumber())
                 } else {
                     this.orderAmountUnit = order.unit
                     this.handleAmountChange(order.amount)
                 }
+            }
+
+            if (this.isSideDisabled(this.orderSide)) {
+                this.orderSide = this.orderSide === ORDER_SIDES.BUY ? ORDER_SIDES.SELL : ORDER_SIDES.BUY
             }
         },
         handleOrderTypeChange(value) {

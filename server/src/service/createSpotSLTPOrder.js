@@ -29,7 +29,7 @@ export default async function createSpotSLTPOrder(data) {
     }
     // usePct为true时，换算为绝对值
     if (usePct) {
-        const cSymbol = checkSymbol(order.symbol)
+        const cSymbol = checkSymbol(symbol)
         const balance = getExchangeMonitor(exchange).balance.spot[cSymbol.base]?.free
         if (!balance) {
             throw new Error('止盈止损数量错误: 没有余额')
