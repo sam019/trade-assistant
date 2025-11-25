@@ -105,25 +105,37 @@ app.post('/twap/toggle', async function closeTWAP(c) {
 })
 
 app.post('/__forceT', async function __forceT(c) {
+    const body = await c.req.json()
+    const { sl } = body
+
     if (process.env.TESTNET) {
         if (!global.__Force) {
             global.__Force = (() => {
-                let force
+                let forceSL, forceTP
                 return {
-                    v: () => force,
-                    f: () => {
-                        force = true
+                    v: () => forceSL,
+                    sl: () => forceSL,
+                    tp: () => forceTP,
+                    f: (sl = true) => {
+                        if (sl) {
+                            forceSL = true
+                        } else {
+                            forceTP = true
+                        }
+                        
                     },
                     c: () => {
-                        force = false
+                        forceSL = false
+                        forceTP = false
                     },
                 }
             })()
         }
-        global.__Force.f()
+        
+        global.__Force.f(sl)
         setTimeout(() => global.__Force?.c(), 5000)
     }
-    return c.json({ __force: global.__Force?.v() })
+    return c.json({ __force: global.__Force && global.__Force[sl ? 'sl': 'tp']() })
 })
 
 export default app

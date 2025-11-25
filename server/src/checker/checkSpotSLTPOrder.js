@@ -50,9 +50,9 @@ export default async function checkSpotSLTPrder(order, ticker) {
         
         // const balance = unit === ORDER_AMOUNT_TYPES.BASE ? getExchangeMonitor(exchange).balance.spot[cSymbol[unit]] : new Decimal(amount).div(lastPrice)
         // console.log('balance', balance)
-        const isSlTriggered = slPrice && (lastPrice <= slPrice) // 判断是否止损
-        const isTpTriggered = tpPrice && (lastPrice >= tpPrice) // 判断是否止盈
-        if (isSlTriggered || isTpTriggered || global.__Force?.v()) {
+        const isSlTriggered = slPrice && (lastPrice <= slPrice) || global.__Force?.sl() // 判断是否止损
+        const isTpTriggered = tpPrice && (lastPrice >= tpPrice) || global.__Force?.tp() // 判断是否止盈
+        if (isSlTriggered || isTpTriggered) {
             orderWatcher.markOrderDealing(_id)
 
             // 止损止盈时有可能正在twap建仓，需要立即停止
@@ -71,7 +71,7 @@ export default async function checkSpotSLTPrder(order, ticker) {
                 amount: realAmount,
                 unit: realUnit,
                 side: ORDER_SIDES.SELL,
-                useTWAP,
+                useTWAP: !isTpTriggered ? false : useTWAP, // 止损强制禁止twap
                 totalMinute,
                 priceLimit,
             }
