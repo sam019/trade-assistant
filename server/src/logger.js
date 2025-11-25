@@ -7,13 +7,22 @@ import bot from './bot.js'
 const appenders = ['console']
 if (!isDev()) {
     appenders.push('fileFilter')
+    log4js.addLayout('fileLayout', (config) => (logEvent) => {
+        // console.log(logEvent)
+        // logEvent.data.forEach(d => console.log(d instanceof Error))
+        return `[${logEvent.startTime.toLocaleString()}] [${logEvent.level.levelStr}]` + logEvent.data.map(d => d instanceof Error ? ` ${d.message}\n${d.stack}\n` : ` ${d}`).join('')
+    })
 }
+
 // 配置日志记录器
 log4js.configure({
     appenders: {
         console: {
-            type: 'stdout',
-        }, // 输出到控制台
+            type: 'stdout', // 输出到控制台
+            // layout: {
+            //     type: 'fileLayout',
+            // },
+        },
         file: {
             type: 'file', // 使用 file appender 进行文件输出
             filename: 'logs/app.log', // 日志文件路径（不需要扩展名，自动添加）
@@ -22,8 +31,9 @@ log4js.configure({
             daysToKeep: 7, // 保留最近 7 天的日志文件
             compress: false, // 启用日志文件压缩（.gz 格式）
             layout: {
-                type: "pattern",
-                pattern: "[%d] [%p] - %m",
+                // type: "pattern",
+                // pattern: "[%d] [%p] - %m",
+                type: 'fileLayout',
             },
         },
         fileFilter: {

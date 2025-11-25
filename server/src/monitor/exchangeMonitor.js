@@ -331,6 +331,7 @@ class ExchangeModel {
                 const sign = Date.now()
                 // const defaultSymbols = ['BTC/USDT', 'BTC/USDT:USDT', 'BTC/USD:BTC']
                 const tickers = await this.watchTickers([...this.tickersCbSymbolMap.values(), ...this.awaitTickersUpdateCb.values()])
+                // throw new Error('test')
                 this.tickers = tickers
                 // console.log('watchTickers', new Date().toLocaleTimeString(), Object.entries(tickers).map(([k, v]) => `${k}:${v.last}`))
                 // console.log(this.tickersCbSymbolMap)
