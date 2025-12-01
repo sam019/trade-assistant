@@ -1,8 +1,13 @@
-import TelegramBot  from 'node-telegram-bot-api'
 import fs from 'fs'
 
-import logger from './logger.js'
+import TelegramBot  from 'node-telegram-bot-api'
+
 import { isDev } from 'share/utils.js'
+
+import logger from './logger.js'
+import orderMonitor from './monitor/orderMonitor.js'
+
+
 
 let token, myChatId
 if (isDev()) {
@@ -38,8 +43,67 @@ if (!isDev()) {
             logger.error('Telegram Bot error: ', e)
         }
     })
+
+    bot.onText('/order', (msg) => {
+        try {
+            const chatId = msg.chat.id
+            const message = orderMonitor.orders.map(order => {
+                let text = `${order.exchange} ${order.symbol} ${order.type}`
+                if (order.triggerPrice) {
+                    text += ` 触发价:${order.slPrice}`
+                }
+                if (order.slPrice) {
+                    text += ` 止损:${order.slPrice}`
+                }
+                if (order.tpPrice) {
+                    text += ` 止盈:${order.slPrice}`
+                }
+                text += ` 数量:${order.amount} 单位:${order.unit}`
+                if (order.leverage) {
+                    text += ` ${order.leverage}x`
+                }
+                if (order.useTWAP) {
+                    text += ` TWAP 时长:${order.totalMinute}`
+                    if (order.priceLimit) {
+                        text += ` 限价:${order.priceLimit}`
+                    }
+                }
+                return text
+            }).join('\n')
+            // console.log('message', message)
+            bot.sendMessage(chatId, message || '无数据')
+        } catch (e) {
+            logger.error('Telegram Bot error: ', e)
+        }
+    })
 }
 
+// setTimeout(() => {
+//     const message = orderMonitor.orders.map(order => {
+//         let text = `${order.exchange} ${order.symbol} ${order.type}`
+//         if (order.triggerPrice) {
+//             text += ` 触发价:${order.slPrice}`
+//         }
+//         if (order.slPrice) {
+//             text += ` 止损:${order.slPrice}`
+//         }
+//         if (order.tpPrice) {
+//             text += ` 止盈:${order.slPrice}`
+//         }
+//         text += ` 数量:${order.amount} 单位:${order.unit}`
+//         if (order.leverage) {
+//             text += ` ${order.leverage}x`
+//         }
+//         if (order.useTWAP) {
+//             text += ` TWAP 时长:${order.totalMinute}`
+//             if (order.priceLimit) {
+//                 text += ` 限价:${order.priceLimit}`
+//             }
+//         }
+//         return text
+//     }).join('\n')
+//     console.log('orders', message)
+// }, 1000 * 10)
 
 
 
