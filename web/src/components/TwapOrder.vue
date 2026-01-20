@@ -90,7 +90,7 @@ export default {
                 <el-tag :type="isBuy ? 'success' : 'danger'" effect="dark" size="small">TWAP({{ sideLabel }})</el-tag>
                 <el-tag :type="cSymbol.isSpot ? 'info' : cSymbol.isLinear ? 'primary' : 'warning'" effect="dark"
                     size="small" @click="$emit('jumpMarket', order.symbol)">{{ order.symbol }}</el-tag>
-                <div class="settings" style="color: white">{{ order.leverage }}x</div>
+                <div v-if="order.leverage" class="settings" style="color: white">{{ order.leverage }}x</div>
                 <div class="settings"><span>{{ order.totalMinute }}</span><span>分钟</span></div>
                 <div v-if="order.priceLimit" class="settings"><span>限价:</span><span>{{ order.priceLimit }}</span></div>
                 <div v-if="order.slPrice" class="settings"><span>止损:</span><span>{{ order.slPrice }}</span></div>

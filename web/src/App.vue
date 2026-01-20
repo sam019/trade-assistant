@@ -20,6 +20,9 @@ import TwapOrder from './components/TwapOrder.vue'
 import * as service from './services/service'
 import socket from './services/socket'
 
+import { formatPriceNumber } from './utils'
+
+
 export default {
     provide() {
         return {
@@ -176,7 +179,7 @@ export default {
                     })
                     // 获取杠杆
                     service.getLeverage(this.exchange, market.symbol).then(r => {
-                        // console.log('getLeverage', r)
+                        console.log('getLeverage', r)
                         this.leverage = r.longLeverage
                     })
                 }
@@ -618,7 +621,7 @@ export default {
             return this.tickers[this.market.symbol] || {}
         },
         lastPrice() {
-            return typeof this.ticker?.close === 'number' ? this.ticker.close.toLocaleString() : '-'
+            return typeof this.ticker?.close === 'number' ? formatPriceNumber(this.ticker.close) : '-'
         },
         buyLabel() {
             return this.isSpotMarket ? '买入' : '买入/做多'
@@ -629,7 +632,7 @@ export default {
         priceChanged() {
             if (!this.ticker.change) return ''
             const sign = this.ticker.change >= 0 ? '+' : ''
-            return `${sign}${this.ticker.change.toLocaleString()}/${sign}${new Decimal(this.ticker.percentage).toDecimalPlaces(2).toNumber()}%`
+            return `${sign}${formatPriceNumber(this.ticker.change)}/${sign}${new Decimal(this.ticker.percentage).toDecimalPlaces(2).toNumber()}%`
         },
         isSpotMarket() {
             return this.market?.spot
@@ -868,14 +871,15 @@ export default {
         },
         orders() {
             const displayOrders = []
-            Object.values(this.exchangeAccount?.orders || {}).forEach(({ orders = [] }) => {
+            // console.log(Object.values(this.exchangeAccount?.orders || {}))
+            Object.values(this.exchangeAccount?.orders || {}).forEach((orders = []) => {
                 orders.forEach(order => {
                     // console.log(order.symbol, this.market.symbol, order.symbol === this.market.symbol)
                     displayOrders.push(order)
                 })
             })
             displayOrders.sort((a, b) => b.updatedAt - a.updatedAt)
-            // console.log(...displayOrders, 'aa',curMarketOrder)
+            // console.log(...displayOrders, 'aa')
             return displayOrders
         },
         curOrders() {

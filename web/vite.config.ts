@@ -1,0 +1,38 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import AutoImport from 'unplugin-auto-import/vite'
+import Components from 'unplugin-vue-components/vite'
+import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import fs from 'fs'
+import path from 'path'
+
+const oneYearInSeconds = 60 * 60 * 24 * 365
+
+export default defineConfig({
+    plugins: [
+        vue(),
+        AutoImport({
+            resolvers: [ElementPlusResolver()],
+        }),
+        Components({
+            resolvers: [ElementPlusResolver()],
+        }),
+    ],
+    server: process.env.NODE_ENV !== 'production' ? {
+        host: '0.0.0.0',
+        https: {
+            key: fs.readFileSync(path.join(import.meta.dirname, '../localhost+3-key.pem')),
+            cert: fs.readFileSync(path.join(import.meta.dirname, '../localhost+3.pem')),
+        },
+        headers: {
+            'Strict-Transport-Security': `max-age=${oneYearInSeconds}`,
+        },
+    } : undefined,
+    resolve: {
+        alias: {
+            'share': path.resolve(__dirname, '../share/src'),
+        },
+    },
+})
+
+
