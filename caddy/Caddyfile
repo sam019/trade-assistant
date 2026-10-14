@@ -1,4 +1,4 @@
-ta.rollingin.top {
+ta.rollingin.asia {
 	root * /srv/www
 	encode
 	file_server
@@ -11,6 +11,6 @@ ta.rollingin.top {
 	}
 }
 
-rollingin.top {
+rollingin.asia {
 	respond "Hello, world!"
 }

@@ -26,7 +26,7 @@ services:
         environment:
             - PORT=8080
             - WEB_PORT=443
-            - DOMAIN="ta.rollingin.top"
+            - DOMAIN="ta.rollingin.asia"
         secrets:
             - PASSWORD
             - BOT_TOKEN
