@@ -33,7 +33,7 @@ services:
             - API_KEY_BINANCE
             - SECRET_KEY_BINANCE
     web:
-        image: ghcr.io/samleong019@gmail.com/trade-assistant-web:${IMAGE_TAG:-main}
+        image: ghcr.io/sam019/trade-assistant-web:${IMAGE_TAG:-main}
         container_name: ta-web
         restart: unless-stopped
         ports:
