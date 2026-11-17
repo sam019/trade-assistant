@@ -1,0 +1,43 @@
+{
+    "log": {
+        "loglevel": "warning"
+    },
+    "inbounds": [
+        {
+            "port": 443,
+            "protocol": "vless",
+            "settings": {
+                "clients": [
+                    {
+                        "id": "2aa4a640-8a20-492f-8f07-5aaa0c341b00",
+                        "flow": "xtls-rprx-vision"
+                    }
+                ],
+                "decryption": "none"
+            },
+            "streamSettings": {
+                "network": "tcp",
+                "security": "reality",
+                "realitySettings": {
+                    "show": false,
+                    "dest": "127.0.0.1:8443",
+                    "xver": 0,
+                    "serverNames": [
+                        "$DOMAIN",
+                        "www.$DOMAIN",
+                        "ta.$DOMAIN"
+                    ],
+                    "privateKey": "SODCIkk7-stmm0pPYCznk5O1ZInvewy1MtpnLGbFAnY",
+                    "shortIds": [
+                        "0123456789abcdef"
+                    ]
+                }
+            }
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "freedom"
+        }
+    ]
+}
