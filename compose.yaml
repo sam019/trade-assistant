@@ -1,6 +1,3 @@
-x-common-env: &common-env
-    DOMAIN: rollingin.asia
-
 secrets:
     PASSWORD:
         environment: PASSWORD
@@ -41,7 +38,7 @@ services:
         ports:
             - "127.0.0.1:8443:80"
         environment:
-            <<: *common-env
+            - DOMAIN=${DOMAIN}
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
@@ -52,7 +49,7 @@ services:
         restart: unless-stopped
         network_mode: host
         environment:
-            <<: *common-env
+            - DOMAIN=${DOMAIN}
         volumes:
             - ./xray/config.json.template:/etc/xray/config.json.template:ro
             - ./xray/config.json:/usr/local/etc/xray/config.json
