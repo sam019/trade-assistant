@@ -53,8 +53,17 @@ services:
         volumes:
             - ./xray/config.json.template:/etc/xray/config.json.template:ro
             - ./xray/config.json:/usr/local/etc/xray/config.json
-        # 使用容器内的环境变量生成 config 文件
-        command: sh -c "sed 's/\$DOMAIN/'\"$$DOMAIN\"'/g' /etc/xray/config.json.template > /usr/local/etc/xray/config.json && exec xray run -config /usr/local/etc/xray/config.json"
+        # 使用 python3 读取模板并精准替换 $DOMAIN 变量
+        command: >
+            sh -c "python3 -c '
+            import os
+            domain = os.environ.get(\"DOMAIN\")
+            with open(\"/etc/xray/config.json.template\", \"r\") as f:
+                content = f.read()
+            content = content.replace(\"\$DOMAIN\", domain)
+            with open(\"/usr/local/etc/xray/config.json\", \"w\") as f:
+                f.write(content)
+            ' && exec xray run -config /usr/local/etc/xray/config.json"
 
 volumes:
     data_db:
