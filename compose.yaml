@@ -54,9 +54,7 @@ services:
             - ./xray/config.json.template:/etc/xray/config.json.template:ro
             - ./xray/config.json:/usr/local/etc/xray/config.json
         # 使用容器内的环境变量生成 config 文件
-        command: >
-            sh -c "sed 's/\$DOMAIN/'\"$$DOMAIN\"'/g' /etc/xray/config.json.template > /usr/local/etc/xray/config.json && 
-                exec xray run -config /usr/local/etc/xray/config.json"
+        command: sh -c "sed 's/\$DOMAIN/'\"$$DOMAIN\"'/g' /etc/xray/config.json.template > /usr/local/etc/xray/config.json && exec xray run -config /usr/local/etc/xray/config.json"
 
 volumes:
     data_db:
