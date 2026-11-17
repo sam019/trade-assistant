@@ -40,7 +40,8 @@ services:
         restart: unless-stopped
         ports:
             - "127.0.0.1:8443:80"
-        <<: *common-env
+        environment:
+            <<: *common-env
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
@@ -50,11 +51,12 @@ services:
         container_name: xray
         restart: unless-stopped
         network_mode: host
-        <<: *common-env
+        environment:
+            <<: *common-env
         volumes:
             - ./xray/config.json.template:/etc/xray/config.json.template:ro
             - ./xray/config.json:/usr/local/etc/xray/config.json
-        # 使用顶部定义的DOMAIN变量，生成config文件
+        # 使用容器内的环境变量生成 config 文件
         command: >
             sh -c "sed 's/\$DOMAIN/'\"$$DOMAIN\"'/g' /etc/xray/config.json.template > /usr/local/etc/xray/config.json && 
                 exec xray run -config /usr/local/etc/xray/config.json"
