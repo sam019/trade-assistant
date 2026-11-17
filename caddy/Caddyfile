@@ -1,5 +1,5 @@
 # DOMAIN变量在compose文件中配置
-http://ta.{$DOMAIN} {
+ta.{$DOMAIN} {
     root * /srv/www
     encode
     file_server
@@ -15,6 +15,6 @@ http://ta.{$DOMAIN} {
     }
 }
 
-http://{$DOMAIN} {
+{$DOMAIN} {
     respond "Hello, world!"
 }
