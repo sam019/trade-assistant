@@ -1,16 +1,47 @@
-ta.rollingin.asia {
-	root * /srv/www
-	encode
-	file_server
-	handle /api/* {
-		uri strip_prefix /api
-		reverse_proxy server:8080
-	}
-	handle /socket.io/* {
-		reverse_proxy server:8080
-	}
+# DOMAIN变量在compose文件中配置
+ta.{$DOMAIN} {
+    root * /srv/www
+    encode
+    file_server
+
+    # # 1. 定义一个专门匹配 OPTIONS 预检请求的匹配器
+    # @cors_preflight {
+    #     method OPTIONS
+    # }
+
+    # # 2. 拦截所有 OPTIONS 请求，直接返回 204，不经过后端
+    # respond @cors_preflight 204
+
+    # # 3. 为该域名下的所有响应统一注入 CORS 响应头
+    # header {
+    #     # 允许访问的前端域名（如果前端和后端在不同域或端口，请写明具体的 Origin，例如 https://yourfrontend.com）
+    #     # 如果允许所有来源，可以写 "*"（注意：若开启了 Allow-Credentials，则不能用 "*"）
+    #     Access-Control-Allow-Origin "ta.rollingin.asia"
+        
+    #     # 允许的 HTTP 方法
+    #     Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+        
+    #     # 允许的请求头
+    #     Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+        
+    #     # 预检请求的缓存时间（秒）
+    #     Access-Control-Max-Age "3600"
+
+    #     # 如果你的 WebSocket / Socket.io 或接口需要携带 Cookie / 凭证，请取消下面这行的注释
+    #     Access-Control-Allow-Credentials "true"
+    # }
+
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy server:8080
+    }
+    
+    handle /socket.io/* {
+        # Socket.io 升级为 WebSocket 连接时，Caddy 的 reverse_proxy 会自动正确处理
+        reverse_proxy server:8080
+    }
 }
 
-rollingin.asia {
-	respond "Hello, world!"
+{$DOMAIN} {
+    respond "Hello, world!"
 }

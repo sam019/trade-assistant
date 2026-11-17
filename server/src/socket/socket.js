@@ -11,13 +11,13 @@ export async function serve({
     if (_io) {
         return _io
     }
-    _io = new Server(server, {
+    _io = new Server(server, corsOrigin ? {
         cors: {
             origin: corsOrigin,
             credentials: true,
             maxAge: 7200, // 加了这个ios26的safari才能通过cors校验，原因未知
         },
-    })
+    } : {})
     _io.use(ioAuth)
     _io.on('connection', socketHandler)
     return _io

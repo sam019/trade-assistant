@@ -57,9 +57,7 @@ let corsOrigin
 // console.log('isDev', isDev())
 if (isDev()) {
     // console.log('getLocalIpAddress', getLocalIpAddress())
-    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', getLocalIpAddress()].map(host => `https://${host}:${process.env.WEB_PORT}`)
-} else {
-    corsOrigin = [`https://${process.env.DOMAIN}:${process.env.WEB_PORT}`]
+    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', getLocalIpAddress()].map(host => `https://${host}:${process.env.WEB_PORT || 443}`)
 }
 
 async function init() {
@@ -71,17 +69,23 @@ async function init() {
 
         const app = new Hono()
 
-        app.use('*', cors({
-            origin(domain) {
-                // console.log('domain', domain)
-                if (corsOrigin.includes(domain)) {
-                    return domain
-                }
-                return ''
-            },
-            credentials: true,
-            maxAge: 7200,
-        })).use('*', httpAuth)
+        // console.log('isDev', isDev())
+        if (isDev()) {
+            // console.log('getLocalIpAddress', getLocalIpAddress())
+            app.use('*', cors({
+                origin(domain) {
+                    // console.log('domain', domain)
+                    if (corsOrigin.includes(domain)) {
+                        return domain
+                    }
+                    return ''
+                },
+                credentials: true,
+                maxAge: 7200,
+            }))
+        }
+
+        app.use('*', httpAuth)
             .get('/', (c) => {
                 return c.text('Hello Hono!')
             })

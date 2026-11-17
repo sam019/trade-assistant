@@ -26,7 +26,6 @@ services:
         environment:
             - PORT=8080
             - WEB_PORT=443
-            - DOMAIN="ta.rollingin.asia"
         secrets:
             - PASSWORD
             - BOT_TOKEN
@@ -46,6 +45,8 @@ services:
         ports:
             - 80:80
             - 443:443
+        environment:
+            - DOMAIN=rollingin.asia # 这里修改域名
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
