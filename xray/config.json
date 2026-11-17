@@ -20,14 +20,15 @@
                 "security": "reality",
                 "realitySettings": {
                     "show": false,
-                    "dest": "apple.com:443",
+                    "dest": "127.0.0.1:8443",
                     "xver": 0,
                     "serverNames": [
-                        "apple.com"
+                        "rollingin.asia",
+                        "www.rollingin.asia",
+                        "ta.rollingin.asia"
                     ],
                     "privateKey": "SODCIkk7-stmm0pPYCznk5O1ZInvewy1MtpnLGbFAnY",
                     "shortIds": [
-                        "",
                         "0123456789abcdef"
                     ]
                 }
