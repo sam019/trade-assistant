@@ -36,8 +36,8 @@ services:
         container_name: ta-web
         restart: unless-stopped
         ports:
-            - 127.0.0.1:8081:443
-            - 80:80
+            - 127.0.0.1:8081:443 # 443端口用于给xray回落，xray回落必须是https网站
+            - 80:80 # 80端口用来给let'S encrypt续期证书
         environment:
             - DOMAIN=rollingin.asia
         volumes:
