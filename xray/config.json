@@ -20,7 +20,7 @@
                 "security": "reality",
                 "realitySettings": {
                     "show": false,
-                    "dest": "127.0.0.1:8443",
+                    "dest": "127.0.0.1:8081",
                     "xver": 0,
                     "serverNames": [
                         "rollingin.asia",
