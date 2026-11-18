@@ -10,7 +10,7 @@ export async function serve({
     if (_io) {
         return _io
     }
-    _io = new Server(server)
+    _io = new Server(server, {}) // 必须要有第二个参数，否则会报错
     _io.use(ioAuth)
     _io.on('connection', socketHandler)
     return _io
