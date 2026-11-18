@@ -33,10 +33,12 @@ app.post('/', async function authorize(c) {
     const body = await c.req.json()
     // console.log('authorize', auth.pwdHash, body)
     if (auth.verify(body.pwd)) {
+        const dev = isDev()
         setCookie(c, cookieKey, body.pwd, {
             httpOnly: true,
-            secure: true,
-            sameSite: 'none',
+            // 开发环境走 HTTP 且同源代理，局域网 IP 访问时 Secure Cookie 无法写入
+            secure: !dev,
+            sameSite: dev ? 'lax' : 'none',
             maxAge: 24 * 60 * 60,
         })
         return c.text('ok')

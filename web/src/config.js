@@ -1,15 +1,4 @@
 
-let _apiURL
-let _wsURL
-if (import.meta.env.PROD) {
-    _apiURL = location.origin + '/api'
-    // _wsURL = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host
-    _wsURL = location.origin
-} else {
-    _apiURL = location.protocol + '//' + location.hostname + ':' + import.meta.env.VITE_API_PORT
-    _wsURL = _apiURL
-}
-// alert('config apiURL: ' + _apiURL + _wsURL)
-// console.log('config apiURL: ', _apiURL, _wsURL)
-export const apiURL = _apiURL
-export const wsURL = _wsURL
+// 开发环境由 Vite 代理转发到后端，生产环境由 Caddy 同源转发，前端只使用同源地址
+export const apiURL = '/api'
+export const wsURL = location.origin

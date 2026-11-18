@@ -23,16 +23,9 @@
  * 
  *            佛祖保佑       财源滚滚     永无BUG
  */
-import fs from 'fs'
-import path from 'path'
-import { createServer } from 'node:https'
-
 import { serve } from '@hono/node-server'
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
 import Decimal from 'decimal.js'
-
-import { isDev } from 'share/utils.js'
 
 import connectDB from './database/db.js'
 
@@ -48,17 +41,9 @@ import { authRouter, httpAuth } from './auth/auth.js'
 
 import socket from './socket/socket.js'
 import logger from './logger.js'
-import { getLocalIpAddress } from './utils.js'
 
 // 设置Decimal的默认舍入模式
 Decimal.config({ rounding: Decimal.ROUND_DOWN })
-
-let corsOrigin
-// console.log('isDev', isDev())
-if (isDev()) {
-    // console.log('getLocalIpAddress', getLocalIpAddress())
-    corsOrigin = ['localhost', '127.0.0.1', '0.0.0.0', getLocalIpAddress()].map(host => `https://${host}:${process.env.WEB_PORT || 443}`)
-}
 
 async function init() {
     try {
@@ -68,22 +53,6 @@ async function init() {
         await monitor.start()
 
         const app = new Hono()
-
-        // console.log('isDev', isDev())
-        if (isDev()) {
-            // console.log('getLocalIpAddress', getLocalIpAddress())
-            app.use('*', cors({
-                origin(domain) {
-                    // console.log('domain', domain)
-                    if (corsOrigin.includes(domain)) {
-                        return domain
-                    }
-                    return ''
-                },
-                credentials: true,
-                maxAge: 7200,
-            }))
-        }
 
         app.use('*', httpAuth)
             .get('/', (c) => {
@@ -100,25 +69,16 @@ async function init() {
             logger.error(err)
             return c.json(err.message, 500)
         })
-        const serverParams = {
-            fetch: app.fetch,
-            port: process.env.PORT || 3000,
-        }
-        if (isDev()) {
-            serverParams.createServer = createServer
-            serverParams.serverOptions = {
-                key: fs.readFileSync(path.join(import.meta.dirname, '../../localhost+3-key.pem')),
-                cert: fs.readFileSync(path.join(import.meta.dirname, '../../localhost+3.pem')),
-            }
-        }
         const server = serve(
-            serverParams,
+            {
+                fetch: app.fetch,
+                port: process.env.PORT || 3000,
+            },
             (info) => {
-                logger.info(`Server is running on https://localhost:${info.port}`)
+                logger.info(`Server is running on http://localhost:${info.port}`)
             },
         )
-        // console.log('corsOrigin', corsOrigin)
-        socket.serve({ server, corsOrigin })
+        socket.serve({ server })
     } catch (e) {
         logger.fatal(e)
         // 主程序错误，抛出并终止，由docker重启

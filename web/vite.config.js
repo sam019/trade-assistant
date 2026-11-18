@@ -1,13 +1,10 @@
 import { defineConfig } from 'vite'
-// import basicSsl from '@vitejs/plugin-basic-ssl'
 import vue from '@vitejs/plugin-vue'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
-import fs from 'fs'
-import path from 'path'
 
-const oneYearInSeconds = 60 * 60 * 24 * 365
+const backendTarget = 'http://127.0.0.1:3000'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -19,16 +16,19 @@ export default defineConfig({
         Components({
             resolvers: [ElementPlusResolver()],
         }),
-        // basicSsl(),
     ],
     server: process.env.NODE_ENV !== 'production' && {
         host: '0.0.0.0',
-        https: {
-            key: fs.readFileSync(path.join(import.meta.dirname, '../localhost+3-key.pem')),
-            cert: fs.readFileSync(path.join(import.meta.dirname, '../localhost+3.pem')),
-        },
-        headers: {
-            'Strict-Transport-Security': `max-age=${oneYearInSeconds}`,
+        proxy: {
+            '/api': {
+                target: backendTarget,
+                changeOrigin: true,
+                rewrite: path => path.replace(/^\/api/, ''),
+            },
+            '/socket.io': {
+                target: backendTarget,
+                ws: true,
+            },
         },
     },
 })
