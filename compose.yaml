@@ -39,19 +39,27 @@ services:
             - 127.0.0.1:8081:443 # 443端口用于给xray回落，xray回落必须是https网站
             - 80:80 # 80端口用来给let'S encrypt续期证书
         environment:
-            - DOMAIN=rollingin.asia
+            - DOMAIN=${DOMAIN}
         volumes:
             - ./caddy:/etc/caddy
             - Caddy_data:/data
 
     xray:
-        image: ghcr.io/xtls/xray-core:latest
+        image: teddysun/xray:26.6.27 # 这个版本之后不能和homeproxy兼容
         container_name: ta-xray
         restart: unless-stopped
         network_mode: host
         user: root # 非root用户无法监听443端口
+        entrypoint: ["/bin/sh", "/entrypoint.sh"]
+        command: []
         volumes:
-            - ./xray/config.json:/usr/local/etc/xray/config.json
+            - ./xray/entrypoint.sh:/entrypoint.sh:ro
+            - ./xray/config.json.template:/config.json.template:ro
+        environment:
+            - DOMAIN=${DOMAIN}
+            - PRIVATE_KEY=${PRIVATE_KEY}
+            - SHORT_ID=${SHORT_ID}
+            - UID=${UID}
 
 volumes:
     data_db:
