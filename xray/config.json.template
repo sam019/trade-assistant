@@ -9,7 +9,7 @@
             "settings": {
                 "clients": [
                     {
-                        "id": "2aa4a640-8a20-492f-8f07-5aaa0c341b00",
+                        "id": "__UID__",
                         "flow": "xtls-rprx-vision"
                     }
                 ],
@@ -23,14 +23,12 @@
                     "dest": "127.0.0.1:8081",
                     "xver": 0,
                     "serverNames": [
-                        "rollingin.asia",
-                        "www.rollingin.asia",
-                        "ta.rollingin.asia"
+                        "__DOMAIN__",
+                        "www.__DOMAIN__",
+                        "ta.__DOMAIN__"
                     ],
-                    "privateKey": "SODCIkk7-stmm0pPYCznk5O1ZInvewy1MtpnLGbFAnY",
-                    "shortIds": [
-                        "0123456789abcdef"
-                    ]
+                    "privateKey": "__PRIVATE_KEY__",
+                    "shortIds": [__SHORT_ID__]
                 }
             }
         }
