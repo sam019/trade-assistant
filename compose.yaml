@@ -45,7 +45,7 @@ services:
             - Caddy_data:/data
 
     xray:
-        image: teddysun/xray:latest
+        image: teddysun/xray:26.6.27 # 这个版本之后不能和homeproxy兼容
         container_name: ta-xray
         restart: unless-stopped
         network_mode: host
