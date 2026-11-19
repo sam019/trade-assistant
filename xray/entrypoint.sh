@@ -18,13 +18,16 @@ for id in $SI; do
 done
 unset IFS
 
+CONFIG_PATH="/etc/xray/config.json"
+mkdir -p /etc/xray
+
 sed -e "s|__DOMAIN__|$D|g" \
     -e "s|__PRIVATE_KEY__|$P|g" \
     -e "s|__UID__|$U|g" \
     -e "s|__SHORT_ID__|$JS_ARR|g" \
-    /config.json.template > /usr/local/etc/xray/config.json
+    /config.json.template > "$CONFIG_PATH"
 
 echo "[xray] rendered config:"
-cat /usr/local/etc/xray/config.json
+cat "$CONFIG_PATH"
 
-exec xray run -config /usr/local/etc/xray/config.json
+exec xray run -config "$CONFIG_PATH"
